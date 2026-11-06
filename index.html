@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'">
+<title>Painel Pé de Serra</title>
+<style>
+:root { --blue:#0940FA; --green:#6DE223; --bg:#f6f7fb; --card:#fff; --fg:#14171f; --muted:#5b6272; --line:#dfe3ee; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0f1219; --card:#171b25; --fg:#eef0f6; --muted:#9aa2b5; --line:#2a3040; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-variant-numeric: tabular-nums; }
+header.top { background:var(--blue); color:#fff; padding:14px 16px; border-bottom:4px solid var(--green); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+header.top h1 { margin:0; font-size:1.05rem; }
+header.top small { opacity:.85; display:block; font-weight:400; }
+main { max-width:1000px; margin:0 auto; padding:16px; display:flex; flex-direction:column; gap:16px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+h2 { margin:0 0 10px; font-size:1.05rem; }
+.note { color:var(--muted); font-size:.88rem; margin:6px 0; }
+label { display:block; font-size:.88rem; color:var(--muted); margin-bottom:4px; }
+input, select, button { font:inherit; padding:10px 12px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); width:100%; }
+button { cursor:pointer; width:auto; }
+button.primary { background:var(--blue); color:#fff; border-color:var(--blue); font-weight:600; }
+button.ghost { background:transparent; color:#fff; border-color:rgba(255,255,255,.6); padding:7px 12px; }
+:focus-visible { outline:2px solid var(--green); outline-offset:2px; }
+#login { max-width:420px; margin:8vh auto 0; }
+#login .row { margin-bottom:12px; }
+.err { color:#c0262d; min-height:1.3em; font-size:.9rem; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(10.5rem, 1fr)); gap:12px; }
+.kpi { border:1px solid var(--line); border-left:5px solid var(--blue); border-radius:10px; padding:12px; }
+.kpi.g { border-left-color:var(--green); }
+.kpi .l { font-size:.82rem; color:var(--muted); }
+.kpi .v { font-size:1.35rem; font-weight:700; white-space:nowrap; }
+.kpi .s { font-size:.8rem; color:var(--muted); }
+table { width:100%; border-collapse:collapse; font-size:.92rem; }
+th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--muted); font-weight:600; font-size:.82rem; }
+.n { text-align:right; white-space:nowrap; }
+.wrap { overflow-x:auto; }
+details.day { border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; }
+details.day > summary { cursor:pointer; padding:10px 12px; background:var(--blue); color:#fff; font-weight:600; display:flex; justify-content:space-between; gap:8px; list-style:none; }
+details.day > summary::-webkit-details-marker { display:none; }
+.nota { padding:8px 12px; border-top:1px solid var(--line); }
+.nota .h { display:flex; justify-content:space-between; gap:8px; font-weight:600; }
+.nota .it { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:.85rem; padding-left:12px; }
+.bar { height:10px; background:var(--line); border-radius:6px; overflow:hidden; margin:4px 0 10px; }
+.bar i { display:block; height:100%; background:var(--green); }
+.bar.b i { background:var(--blue); }
+.hidden { display:none !important; }
+.tools { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
+.tools > div { flex:1 1 12rem; }
+@media print {
+  header.top, .noprint, #login { display:none !important; }
+  body { background:#fff; color:#000; }
+  .card { border:none; padding:0; }
+  details.day { break-inside:avoid; }
+  details.day > summary { background:#0940FA !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+</style>
+</head>
+<body>
+<header class="top"><h1>Pé de Serra Irrigação<small id="quem">Painel de vendas</small></h1><button class="ghost hidden" id="sair" type="button">Sair</button></header>
+<main>
+  <section class="card" id="login">
+    <h2>Entrar</h2>
+    <form id="form" autocomplete="off">
+      <div class="row"><label for="usr">Quem é você</label><select id="usr"></select></div>
+      <div class="row"><label for="pw">Senha</label><input id="pw" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required></div>
+      <button class="primary" type="submit" id="go">Entrar</button>
+      <p class="err" id="err" role="alert"></p>
+      <p class="note">Os dados ficam criptografados. A senha abre só o que é seu. Se a senha estiver errada, nada é mostrado.</p>
+    </form>
+  </section>
+  <div id="app" class="hidden"></div>
+</main>
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  const pct = (v) => (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+  const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const sum = (a, f) => a.reduce((t, x) => t + f(x), 0);
+
+  const decrypt = async (blob, pw) => {
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw.trim().toLowerCase()), 'PBKDF2', false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(blob.salt), iterations: blob.iter, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    const buf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(blob.iv) }, key, b64(blob.ct));
+    return JSON.parse(new TextDecoder().decode(buf));
+  };
+
+  const kpi = (l, v, s, g) => { const k = mk('div', 'kpi' + (g ? ' g' : '')); k.append(mk('div', 'l', l), mk('div', 'v', v), mk('div', 's', s || '')); return k; };
+  const monthSelect = (meses, onchange) => {
+    const w = mk('div'); w.append(mk('label', '', 'Mês')); const s = document.createElement('select');
+    meses.slice().reverse().forEach((m) => s.append(new Option(m.label, m.mes))); s.addEventListener('change', () => onchange(s.value)); w.append(s); return { w, s };
+  };
+  const dias = (el, dias, admin) => {
+    el.replaceChildren();
+    if (!dias.length) { el.append(mk('p', 'note', 'Sem vendas neste mês.')); return; }
+    dias.forEach((d) => {
+      const det = mk('details', 'day'); const sm = mk('summary'); sm.append(mk('span', '', d.d + ' · ' + d.n.length + (d.n.length === 1 ? ' lançamento' : ' lançamentos')), mk('span', '', brl.format(d.total))); det.append(sm);
+      d.n.forEach((n) => {
+        const bx = mk('div', 'nota'); const h = mk('div', 'h'); h.append(mk('span', '', n.t + (admin && n.cl ? ' · ' + n.cl : '') + (admin && n.f ? ' · ' + n.f : '')), mk('span', '', brl.format(n.v))); bx.append(h);
+        n.i.forEach((i) => { const r = mk('div', 'it'); r.append(mk('span', '', i.t), mk('span', '', brl.format(i.v))); bx.append(r); });
+        det.append(bx);
+      });
+      el.append(det);
+    });
+  };
+
+  const viewVendedor = (P) => {
+    const app = $('#app'); app.replaceChildren();
+    const card = mk('section', 'card'); const kp = mk('div', 'kpis'); const rom = mk('div');
+    const ms = monthSelect(P.meses, () => draw());
+    const head = mk('div', 'tools noprint'); head.append(ms.w);
+    const draw = () => {
+      const m = ms.s.value, d = P.dados[m] || { fat: 0, notas: 0, ticket: 0, dias: [] }, info = P.meses.find((x) => x.mes === m);
+      kp.replaceChildren(kpi('Faturamento total', brl.format(d.fat), 'vendas emitidas no mês'), kpi('Notas emitidas', String(d.notas), 'notas do sistema', true), kpi('Ticket médio', brl.format(d.ticket), 'por nota do sistema'));
+      if (d.com != null) kp.append(kpi('Comissão estimada', brl.format(d.com), pct(d.taxa) + (info && info.batida === 'sim' ? ' (meta batida)' : ' (meta não batida)'), true));
+      dias(rom, d.dias, false);
+    };
+    card.append(mk('h2', '', 'Olá, ' + P.nome.split(' ')[0]), head, kp);
+    const c2 = mk('section', 'card'); const bt = mk('button', 'noprint', 'Imprimir / salvar PDF'); bt.type = 'button'; bt.addEventListener('click', () => window.print());
+    c2.append(mk('h2', '', 'Suas vendas, dia a dia'), mk('p', 'note', 'Cada lançamento foi contabilizado. Vendas de 01 a 06/10 vêm do caderno de caixa, que registra o total por forma de pagamento e não nota a nota. Toque no dia para abrir.'), bt, rom);
+    app.append(card, c2); draw();
+    const rod = mk('p', 'note', 'Dados gerados em ' + P.gerado.split('-').reverse().join('/') + '. Comissão estimada, não substitui o fechamento da folha.'); app.append(rod);
+  };
+
+  const viewAdmin = (P) => {
+    const app = $('#app'); app.replaceChildren();
+    const top = mk('section', 'card'); const kp = mk('div', 'kpis'); const meta = mk('div');
+    const ms = monthSelect(P.meses, () => draw()); const head = mk('div', 'tools noprint'); head.append(ms.w); top.append(mk('h2', '', 'Visão da gestão'), head, kp, meta);
+    const cs = mk('section', 'card'); const cf = mk('section', 'card'); const cm = mk('section', 'card'); const cr = mk('section', 'card');
+    const nomes = Object.keys(P.vendedores); const selR = document.createElement('select'); nomes.forEach((n) => selR.append(new Option(n, n))); selR.addEventListener('change', () => draw());
+    const rw = mk('div'); const rt = mk('div', 'tools noprint'); const sw = mk('div'); sw.append(mk('label', '', 'Romaneio de'), selR); const pb = mk('button', '', 'Imprimir / salvar PDF'); pb.type = 'button'; pb.addEventListener('click', () => window.print()); rt.append(sw, pb);
+    cr.append(mk('h2', '', 'Romaneio por vendedor'), rt, rw);
+    const draw = () => {
+      const m = ms.s.value, info = P.meses.find((x) => x.mes === m), L = P.loja[m] || { fat: 0, formas: [], merc: [] };
+      const vend = nomes.map((n) => ({ n, d: P.vendedores[n][m] })).filter((x) => x.d);
+      const notas = sum(vend, (x) => x.d.notas), fatS = sum(vend, (x) => x.d.fat);
+      kp.replaceChildren(kpi('Faturamento total', brl.format(L.fat), 'sistema + caderno'), kpi('Notas do sistema', String(notas), '', true), kpi('Ticket médio', brl.format(notas ? sum(vend, (x) => x.d.ticket * x.d.notas) / notas : 0), 'por nota do sistema'));
+      meta.replaceChildren();
+      if (info && info.meta) { const p = L.fat / info.meta; meta.append(mk('p', 'note', 'Meta de ' + brl.format(info.meta) + ': ' + pct(p) + ' atingido. Taxa de comissão: ' + pct(info.taxa) + '.')); const b = mk('div', 'bar b'); const i = document.createElement('i'); i.style.width = Math.min(100, p * 100) + '%'; b.append(i); meta.append(b); }
+      cs.replaceChildren(mk('h2', '', 'Por vendedor')); const w = mk('div', 'wrap'); const t = mk('table'); t.innerHTML = '<thead><tr><th>Vendedor</th><th class="n">Notas</th><th class="n">Faturamento</th><th class="n">Ticket</th><th class="n">Margem</th><th class="n">Comissão</th></tr></thead>'; const tb = mk('tbody');
+      vend.forEach(({ n, d }) => { const tr = mk('tr'); [[n], [String(d.notas), 'n'], [brl.format(d.fat), 'n'], [brl.format(d.ticket), 'n'], [brl.format(d.margem), 'n'], [d.com != null ? brl.format(d.com) : '', 'n']].forEach(([x, c]) => tr.append(mk('td', c || '', x))); tb.append(tr); });
+      t.append(tb); w.append(t); cs.append(w, mk('p', 'note', 'Margem só nos itens com custo cadastrado; vendas do caderno não têm custo. Comissão de 1% sem meta batida e 2% com meta batida, sobre o valor vendido.'));
+      cf.replaceChildren(mk('h2', '', 'Por forma de pagamento')); const mx = Math.max(1, ...L.formas.map((f) => f.v));
+      L.formas.forEach((f) => { const r = mk('div', 'h'); r.style.cssText = 'display:flex;justify-content:space-between;gap:8px'; r.append(mk('span', '', f.f + ' · ' + f.n + ' lanç.'), mk('b', '', brl.format(f.v) + ' · ' + pct(f.v / (L.fat || 1)))); const b = mk('div', 'bar'); const i = document.createElement('i'); i.style.width = (f.v / mx * 100) + '%'; b.append(i); cf.append(r, b); });
+      cm.replaceChildren(mk('h2', '', 'Mercadorias mais vendidas')); const w2 = mk('div', 'wrap'); const t2 = mk('table'); t2.innerHTML = '<thead><tr><th>Mercadoria</th><th class="n">Qtd</th><th class="n">Valor</th><th class="n">Margem</th></tr></thead>'; const tb2 = mk('tbody');
+      L.merc.forEach((x) => { const tr = mk('tr'); tr.append(mk('td', '', x.m), mk('td', 'n', String(x.q).replace('.', ',')), mk('td', 'n', brl.format(x.v)), mk('td', 'n', x.mg == null ? '—' : brl.format(x.mg))); tb2.append(tr); }); t2.append(tb2); w2.append(t2); cm.append(w2, mk('p', 'note', 'Os 60 maiores itens por valor. Margem em branco quando o custo não está cadastrado.'));
+      dias(rw, (P.vendedores[selR.value][m] || { dias: [] }).dias, true);
+    };
+    app.append(top, cs, cf, cm, cr, mk('p', 'note', 'Dados gerados em ' + P.gerado.split('-').reverse().join('/') + '.')); draw();
+  };
+
+  fetch('data/usuarios.json').then((r) => r.json()).then((us) => { us.forEach((u) => $('#usr').append(new Option(u.nome, u.id))); });
+  $('#form').addEventListener('submit', async (e) => {
+    e.preventDefault(); const err = $('#err'); err.textContent = ''; const go = $('#go'); go.disabled = true; go.textContent = 'Abrindo...';
+    try {
+      const id = $('#usr').value; const blob = await (await fetch('data/' + id + '.json', { cache: 'no-store' })).json();
+      const P = await decrypt(blob, $('#pw').value);
+      $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#sair').classList.remove('hidden'); $('#quem').textContent = P.nome;
+      $('#pw').value = ''; (P.perfil === 'admin' ? viewAdmin : viewVendedor)(P);
+    } catch (x) { err.textContent = 'Senha incorreta ou dados indisponíveis.'; }
+    go.disabled = false; go.textContent = 'Entrar';
+  });
+  $('#sair').addEventListener('click', () => location.reload());
+})();
+</script>
+</body>
+</html>
