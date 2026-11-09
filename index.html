@@ -7,81 +7,174 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'">
 <title>Painel Pé de Serra</title>
 <style>
-:root { --blue:#0940FA; --green:#6DE223; --bg:#f6f7fb; --card:#fff; --fg:#14171f; --muted:#5b6272; --line:#dfe3ee; }
-@media (prefers-color-scheme: dark) { :root { --bg:#0f1219; --card:#171b25; --fg:#eef0f6; --muted:#9aa2b5; --line:#2a3040; } }
+:root {
+  --blue: #0940FA; --green: #6DE223; --amber: #F29F05; --gray: #8a93a6;
+  --bg: #f4f6fa; --panel: #ffffff; --fg: #141821; --muted: #5d6476; --line: #e1e5ee; --track: #eceff5;
+  --bad: #c42b2b; --warn: #b46a00; --pop: #ffffff; --shadow: 0 6px 24px rgba(20, 24, 33, .12);
+  --radius: 12px; --serif: ui-serif, "New York", Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --blue: #5a7dff; --bg: #0e1118; --panel: #161a24; --fg: #eef0f6; --muted: #9ba3b6; --line: #262c3b; --track: #222838;
+    --bad: #ff6b6b; --warn: #f0b04a; --pop: #1d2230; --shadow: 0 6px 24px rgba(0, 0, 0, .5); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --blue: #5a7dff; --bg: #0e1118; --panel: #161a24; --fg: #eef0f6; --muted: #9ba3b6; --line: #262c3b; --track: #222838;
+  --bad: #ff6b6b; --warn: #f0b04a; --pop: #1d2230; --shadow: 0 6px 24px rgba(0, 0, 0, .5); color-scheme: dark;
+}
 * { box-sizing: border-box; }
-body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-variant-numeric: tabular-nums; }
-header.top { background:var(--blue); color:#fff; padding:14px 16px; border-bottom:4px solid var(--green); display:flex; align-items:center; justify-content:space-between; gap:12px; }
-header.top h1 { margin:0; font-size:1.05rem; }
-header.top small { opacity:.85; display:block; font-weight:400; }
-main { max-width:1000px; margin:0 auto; padding:16px; display:flex; flex-direction:column; gap:16px; }
-.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
-h2 { margin:0 0 10px; font-size:1.05rem; }
-.note { color:var(--muted); font-size:.88rem; margin:6px 0; }
-label { display:block; font-size:.88rem; color:var(--muted); margin-bottom:4px; }
-input, select, button { font:inherit; padding:10px 12px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--fg); width:100%; }
-button { cursor:pointer; width:auto; }
-button.primary { background:var(--blue); color:#fff; border-color:var(--blue); font-weight:600; }
-button.ghost { background:transparent; color:#fff; border-color:rgba(255,255,255,.6); padding:7px 12px; }
-:focus-visible { outline:2px solid var(--green); outline-offset:2px; }
-#login { max-width:420px; margin:8vh auto 0; }
-#login .row { margin-bottom:12px; }
-.err { color:#c0262d; min-height:1.3em; font-size:.9rem; }
-.kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(10.5rem, 1fr)); gap:12px; }
-.kpi { border:1px solid var(--line); border-left:5px solid var(--blue); border-radius:10px; padding:12px; }
-.kpi.g { border-left-color:var(--green); }
-.kpi .l { font-size:.82rem; color:var(--muted); }
-.kpi .v { font-size:1.35rem; font-weight:700; white-space:nowrap; }
-.kpi .s { font-size:.8rem; color:var(--muted); }
-table { width:100%; border-collapse:collapse; font-size:.92rem; }
-th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
-th { color:var(--muted); font-weight:600; font-size:.82rem; }
-.n { text-align:right; white-space:nowrap; }
-.wrap { overflow-x:auto; }
-details.day { border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; }
-details.day > summary { cursor:pointer; padding:10px 12px; background:var(--blue); color:#fff; font-weight:600; display:flex; justify-content:space-between; gap:8px; list-style:none; }
-details.day > summary::-webkit-details-marker { display:none; }
-.nota { padding:8px 12px; border-top:1px solid var(--line); }
-.nota .h { display:flex; justify-content:space-between; gap:8px; font-weight:600; }
-.nota .it { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:.85rem; padding-left:12px; }
-.bar { height:10px; background:var(--line); border-radius:6px; overflow:hidden; margin:4px 0 10px; }
-.bar i { display:block; height:100%; background:var(--green); }
-.bar.b i { background:var(--blue); }
-.hidden { display:none !important; }
-.tools { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
-.tools > div { flex:1 1 12rem; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--sans); font-variant-numeric: tabular-nums; }
+.hidden { display: none !important; }
+.wrap-page { max-width: 1180px; margin: 0 auto; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 20px; }
+
+/* Cabeçalho */
+.head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; border-bottom: 3px solid var(--green); padding-bottom: 14px; }
+.head h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.15; }
+.head .sub { margin: 4px 0 0; color: var(--muted); }
+.head .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Controles */
+select, input, button { font: inherit; color: var(--fg); }
+select, input[type=password], input[type=search] { width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.btn { padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+.btn:disabled { opacity: .6; cursor: progress; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.filters { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 10px 14px; align-items: end; }
+.f { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.f label, label { font-size: .8rem; color: var(--muted); }
+
+/* Abas */
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.tab { all: unset; cursor: pointer; padding: 10px 14px; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected=true] { color: var(--fg); border-bottom-color: var(--blue); font-weight: 600; }
+.tab:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.panel { display: flex; flex-direction: column; gap: 16px; }
+
+/* Indicadores */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 12px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-top: 4px solid var(--blue); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.kpi.g { border-top-color: var(--green); }
+.kpi.a { border-top-color: var(--amber); }
+.kpi .lbl { font-size: .8rem; color: var(--muted); }
+.kpi .val { font-family: var(--serif); font-size: 1.55rem; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .hint { font-size: .8rem; color: var(--muted); }
+.meter { height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+.meter i { display: block; height: 100%; background: var(--blue); border-radius: 4px; }
+
+/* Cartões e grade */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card.wide { grid-column: 1 / -1; }
+.card h2 { margin: 0; font-size: 1.02rem; font-weight: 600; }
+.note { margin: 0; color: var(--muted); font-size: .8rem; }
+.empty { display: flex; align-items: center; justify-content: center; min-height: 80px; color: var(--muted); font-size: .85rem; }
+
+/* Gráficos */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.tick { fill: var(--muted); font-size: 11px; }
+.grid-line { stroke: var(--line); }
+.tip { position: absolute; pointer-events: none; background: var(--pop); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 6px 10px; font-size: .8rem; white-space: nowrap; z-index: 3; }
+.tip .d { color: var(--muted); }
+.tip .r { display: flex; gap: 12px; justify-content: space-between; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.brow { display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.brow .name { overflow-wrap: anywhere; font-size: .9rem; }
+.brow .track { height: 14px; background: var(--track); border-radius: 7px; overflow: hidden; }
+.brow .track i { display: block; height: 100%; border-radius: 7px; background: var(--blue); }
+.bars.g .track i { background: var(--green); }
+.brow .num { text-align: right; white-space: nowrap; font-size: .9rem; }
+.brow .num small { color: var(--muted); margin-left: 6px; }
+@media (max-width: 560px) { .brow { grid-template-columns: minmax(0, 1fr) auto; } .brow .track { grid-column: 1 / -1; order: 3; } }
+
+/* Tabelas */
+.tablewrap { overflow-x: auto; }
+.scroll { max-height: 30rem; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 600; font-size: .78rem; white-space: nowrap; z-index: 1; }
+td.n, th.n { text-align: right; white-space: nowrap; }
+tfoot td { font-weight: 600; border-bottom: none; }
+.tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+.tools > .f { flex: 1 1 14rem; }
+
+/* Romaneio */
+details.day { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+details.day + details.day { margin-top: 8px; }
+details.day > summary { cursor: pointer; padding: 10px 14px; background: var(--blue); color: #fff; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; list-style: none; }
+details.day > summary::-webkit-details-marker { display: none; }
+details.day > summary::before { content: "▸"; margin-right: 8px; }
+details.day[open] > summary::before { content: "▾"; }
+details.day > summary span:first-child { flex: 1; }
+.nota { padding: 9px 14px; border-top: 1px solid var(--line); }
+.nota .h { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: .9rem; }
+.nota .h small { font-weight: 400; color: var(--muted); }
+.nota .it { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: .82rem; padding-left: 14px; }
+
+/* Login */
+.login { max-width: 420px; width: 100%; margin: 6vh auto 0; }
+.login form { display: flex; flex-direction: column; gap: 12px; }
+.err { color: var(--bad); min-height: 1.3em; font-size: .88rem; margin: 0; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand b { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--blue); color: #fff; font-family: var(--serif); font-size: 1.05rem; }
+
 @media print {
-  header.top, .noprint, #login { display:none !important; }
-  body { background:#fff; color:#000; }
-  .card { border:none; padding:0; }
-  details.day { break-inside:avoid; }
-  details.day > summary { background:#0940FA !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  body { background: #fff; color: #000; }
+  .noprint, .filters, .tabs, .head .acts { display: none !important; }
+  .panel.hidden.print-keep { display: flex !important; }
+  .card, .kpi { border-color: #ccc; break-inside: avoid; }
+  details.day { break-inside: avoid; }
+  details.day > summary { background: #0940FA !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
 </head>
 <body>
-<header class="top"><h1>Pé de Serra Irrigação<small id="quem">Painel de vendas</small></h1><button class="ghost hidden" id="sair" type="button">Sair</button></header>
-<main>
-  <section class="card" id="login">
-    <h2>Entrar</h2>
+<div class="wrap-page">
+  <header class="head" id="topo">
+    <div>
+      <h1 id="titulo">Painel de vendas</h1>
+      <p class="sub" id="sub">Pé de Serra Irrigação</p>
+    </div>
+    <div class="acts hidden" id="acts">
+      <button class="btn" type="button" id="imprimir">Imprimir / PDF</button>
+      <button class="btn" type="button" id="sair">Sair</button>
+    </div>
+  </header>
+
+  <section class="card login" id="login">
+    <div class="brand"><b>P</b><h2>Entrar no painel</h2></div>
     <form id="form" autocomplete="off">
-      <div class="row"><label for="usr">Quem é você</label><select id="usr"></select></div>
-      <div class="row"><label for="pw">Senha</label><input id="pw" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required></div>
-      <button class="primary" type="submit" id="go">Entrar</button>
+      <div class="f"><label for="usr">Quem é você</label><select id="usr"></select></div>
+      <div class="f"><label for="pw">Senha</label><input id="pw" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required></div>
+      <button class="btn primary" type="submit" id="go">Entrar</button>
       <p class="err" id="err" role="alert"></p>
       <p class="note">Os dados ficam criptografados. A senha abre só o que é seu. Se a senha estiver errada, nada é mostrado.</p>
     </form>
   </section>
-  <div id="app" class="hidden"></div>
-</main>
+
+  <div id="app" class="panel hidden"></div>
+</div>
 <script>
 (() => {
-  const $ = (s) => document.querySelector(s);
+  const $ = (s, r = document) => r.querySelector(s);
   const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  const brl0 = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+  const kfmt = (v) => v >= 1000 ? 'R$ ' + (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : brl0.format(v);
   const pct = (v) => (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+  const int = (v) => v.toLocaleString('pt-BR');
   const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const NS = 'http://www.w3.org/2000/svg';
+  const sv = (tag, at) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); return e; };
   const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
   const sum = (a, f) => a.reduce((t, x) => t + f(x), 0);
+  const CORES = ['var(--blue)', 'var(--green)', 'var(--amber)', 'var(--gray)'];
+  const dataBR = (iso) => iso.split('-').reverse().join('/');
 
   const decrypt = async (blob, pw) => {
     const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw.trim().toLowerCase()), 'PBKDF2', false, ['deriveKey']);
@@ -90,82 +183,244 @@ details.day > summary::-webkit-details-marker { display:none; }
     return JSON.parse(new TextDecoder().decode(buf));
   };
 
-  const kpi = (l, v, s, g) => { const k = mk('div', 'kpi' + (g ? ' g' : '')); k.append(mk('div', 'l', l), mk('div', 'v', v), mk('div', 's', s || '')); return k; };
-  const monthSelect = (meses, onchange) => {
-    const w = mk('div'); w.append(mk('label', '', 'Mês')); const s = document.createElement('select');
-    meses.slice().reverse().forEach((m) => s.append(new Option(m.label, m.mes))); s.addEventListener('change', () => onchange(s.value)); w.append(s); return { w, s };
+  // ---------- peças ----------
+  const kpi = (lbl, val, hint, cls, meter) => {
+    const k = mk('div', 'kpi' + (cls ? ' ' + cls : '')); k.append(mk('div', 'lbl', lbl), mk('div', 'val', val));
+    if (hint) k.append(mk('div', 'hint', hint));
+    if (meter != null) { const m = mk('div', 'meter'); const i = mk('i'); i.style.width = Math.min(100, meter * 100) + '%'; m.append(i); k.append(m); }
+    return k;
   };
-  const dias = (el, dias, admin) => {
-    el.replaceChildren();
-    if (!dias.length) { el.append(mk('p', 'note', 'Sem vendas neste mês.')); return; }
+  const card = (id, titulo, cls) => { const c = mk('section', 'card' + (cls ? ' ' + cls : '')); c.id = id; c.append(mk('h2', '', titulo)); return c; };
+  const barras = (lista, cls) => {
+    const w = mk('div', 'bars' + (cls ? ' ' + cls : '')); const mx = Math.max(1, ...lista.map((x) => x.v));
+    if (!lista.length) { w.append(mk('div', 'empty', 'Sem dados no período.')); return w; }
+    lista.forEach((x) => {
+      const r = mk('div', 'brow'); const t = mk('div', 'track'); const i = mk('i'); i.style.width = (x.v / mx * 100) + '%'; t.append(i);
+      const n = mk('div', 'num', x.txt); if (x.sub) n.append(mk('small', '', x.sub)); r.append(mk('div', 'name', x.nome), t, n); w.append(r);
+    });
+    return w;
+  };
+  const tabela = (cols, linhas, foot) => {
+    const w = mk('div', 'tablewrap'); const t = mk('table'); const th = mk('thead'); const tr = mk('tr');
+    cols.forEach(([c, n]) => tr.append(mk('th', n ? 'n' : '', c))); th.append(tr); t.append(th);
+    const tb = mk('tbody'); linhas.forEach((l) => { const r = mk('tr'); l.forEach((x, i) => r.append(mk('td', cols[i][1] ? 'n' : '', x))); tb.append(r); }); t.append(tb);
+    if (foot) { const tf = mk('tfoot'); const r = mk('tr'); foot.forEach((x, i) => r.append(mk('td', cols[i][1] ? 'n' : '', x))); tf.append(r); t.append(tf); }
+    w.append(t); return w;
+  };
+
+  // Gráfico de colunas por dia (empilhado por série). dias: [{label, full, partes:[{s, v}]}]
+  const charts = [];
+  const colunas = (host, dias, series) => {
+    const draw = () => {
+      host.replaceChildren();
+      if (!dias.length) { host.append(mk('div', 'empty', 'Sem vendas no período.')); return; }
+      const W = Math.max(280, host.clientWidth || 600), H = 240, m = { t: 12, r: 8, b: 26, l: 52 };
+      const iw = W - m.l - m.r, ih = H - m.t - m.b;
+      const tot = dias.map((d) => sum(d.partes, (p) => p.v)); const mx = Math.max(1, ...tot);
+      const step = niceStep(mx / 4); const top = Math.ceil(mx / step) * step;
+      const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Faturamento por dia' });
+      for (let v = 0; v <= top + 1e-6; v += step) {
+        const y = m.t + ih - (v / top) * ih;
+        svg.append(sv('line', { x1: m.l, x2: W - m.r, y1: y, y2: y, class: 'grid-line' }));
+        const tx = sv('text', { x: m.l - 6, y: y + 4, 'text-anchor': 'end', class: 'tick' }); tx.textContent = kfmt(v); svg.append(tx);
+      }
+      const bw = iw / dias.length, gap = Math.min(6, bw * 0.25), every = Math.ceil(dias.length / Math.max(1, Math.floor(iw / 28)));
+      dias.forEach((d, i) => {
+        let y = m.t + ih; const x = m.l + i * bw + gap / 2; const g = sv('g', {});
+        d.partes.forEach((p) => {
+          const h = (p.v / top) * ih; y -= h;
+          g.append(sv('rect', { x, y, width: Math.max(1, bw - gap), height: Math.max(0, h), fill: CORES[series.indexOf(p.s) % CORES.length], rx: 2 }));
+        });
+        const hit = sv('rect', { x: m.l + i * bw, y: m.t, width: bw, height: ih, fill: 'transparent' });
+        const show = (ev) => {
+          tip.replaceChildren(mk('div', 'd', d.full));
+          const ln = mk('div', 'r'); ln.append(mk('b', '', 'Total'), mk('b', '', brl.format(tot[i]))); tip.append(ln);
+          if (d.partes.length > 1) d.partes.forEach((p) => { const r = mk('div', 'r'); r.append(mk('span', '', p.s), mk('span', '', brl.format(p.v))); tip.append(r); });
+          tip.classList.remove('hidden');
+          const bx = host.getBoundingClientRect(); const px = (ev.clientX ?? (bx.left + (m.l + (i + .5) * bw) * bx.width / W)) - bx.left;
+          const tw = tip.offsetWidth; tip.style.left = Math.max(0, Math.min(bx.width - tw, px - tw / 2)) + 'px'; tip.style.top = '-8px';
+        };
+        hit.addEventListener('pointermove', show); hit.addEventListener('pointerdown', show); hit.addEventListener('pointerleave', () => tip.classList.add('hidden'));
+        g.append(hit); svg.append(g);
+        if (i % every === 0) { const tx = sv('text', { x: m.l + (i + .5) * bw, y: H - 8, 'text-anchor': 'middle', class: 'tick' }); tx.textContent = d.label; svg.append(tx); }
+      });
+      const tip = mk('div', 'tip hidden'); host.append(svg, tip);
+    };
+    charts.push(draw); draw();
+  };
+  const niceStep = (x) => { const p = Math.pow(10, Math.floor(Math.log10(Math.max(x, 1)))); const n = x / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; };
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => charts.forEach((f) => f()), 150); });
+  const legenda = (series) => { const l = mk('div', 'legend'); series.forEach((s, i) => { const x = mk('span'); const c = mk('i'); c.style.background = CORES[i % CORES.length]; x.append(c, document.createTextNode(s)); l.append(x); }); return l; };
+
+  const romaneio = (host, dias, admin) => {
+    host.replaceChildren();
+    if (!dias.length) { host.append(mk('div', 'empty', 'Sem vendas neste mês.')); return; }
     dias.forEach((d) => {
-      const det = mk('details', 'day'); const sm = mk('summary'); sm.append(mk('span', '', d.d + ' · ' + d.n.length + (d.n.length === 1 ? ' lançamento' : ' lançamentos')), mk('span', '', brl.format(d.total))); det.append(sm);
+      const det = mk('details', 'day'); const sm = mk('summary');
+      sm.append(mk('span', '', d.d + ' · ' + d.n.length + (d.n.length === 1 ? ' lançamento' : ' lançamentos')), mk('span', '', brl.format(d.total))); det.append(sm);
       d.n.forEach((n) => {
-        const bx = mk('div', 'nota'); const h = mk('div', 'h'); h.append(mk('span', '', n.t + (admin && n.cl ? ' · ' + n.cl : '') + (admin && n.f ? ' · ' + n.f : '')), mk('span', '', brl.format(n.v))); bx.append(h);
+        const bx = mk('div', 'nota'); const h = mk('div', 'h'); const t = mk('span', '', n.t);
+        const extra = [admin && n.cl, admin && n.f].filter(Boolean).join(' · '); if (extra) t.append(mk('small', '', ' · ' + extra));
+        h.append(t, mk('span', '', brl.format(n.v))); bx.append(h);
         n.i.forEach((i) => { const r = mk('div', 'it'); r.append(mk('span', '', i.t), mk('span', '', brl.format(i.v))); bx.append(r); });
         det.append(bx);
       });
-      el.append(det);
+      host.append(det);
     });
   };
+  const ctrlRomaneio = (host) => {
+    const t = mk('div', 'tools noprint');
+    const ab = mk('button', 'btn', 'Abrir todos'); ab.type = 'button'; ab.addEventListener('click', () => host.querySelectorAll('details').forEach((d) => (d.open = true)));
+    const fe = mk('button', 'btn', 'Fechar todos'); fe.type = 'button'; fe.addEventListener('click', () => host.querySelectorAll('details').forEach((d) => (d.open = false)));
+    t.append(ab, fe); return t;
+  };
+  const diaCurto = (d) => d.d.split(' ')[1].slice(0, 2);
 
+  // ---------- estrutura comum: filtros + abas ----------
+  const montar = (P, abas, extraFiltros) => {
+    const app = $('#app'); app.replaceChildren(); charts.length = 0;
+    const fil = mk('section', 'filters noprint'); fil.id = 'filtros';
+    const fm = mk('div', 'f'); fm.append(mk('label', '', 'Mês')); const sMes = mk('select'); sMes.id = 'f-mes';
+    P.meses.slice().reverse().forEach((m) => sMes.append(new Option(m.label, m.mes))); fm.querySelector('label').htmlFor = 'f-mes'; fm.append(sMes); fil.append(fm);
+    (extraFiltros || []).forEach((e) => fil.append(e));
+    const nav = mk('nav', 'tabs noprint'); nav.setAttribute('role', 'tablist');
+    const paineis = {};
+    abas.forEach(([id, nome], i) => {
+      const b = mk('button', 'tab', nome); b.type = 'button'; b.setAttribute('role', 'tab'); b.id = 'tab-' + id; b.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+      const p = mk('div', 'panel' + (i ? ' hidden' : '')); p.id = 'panel-' + id; p.setAttribute('role', 'tabpanel'); paineis[id] = p;
+      b.addEventListener('click', () => { nav.querySelectorAll('.tab').forEach((x) => x.setAttribute('aria-selected', String(x === b))); Object.values(paineis).forEach((x) => x.classList.toggle('hidden', x !== p)); charts.forEach((f) => f()); });
+      nav.append(b);
+    });
+    app.append(fil, nav, ...Object.values(paineis));
+    const rod = mk('p', 'note', 'Dados gerados em ' + dataBR(P.gerado) + '. Comissão estimada: não substitui o fechamento da folha.'); app.append(rod);
+    return { sMes, paineis };
+  };
+
+  // ---------- vendedor ----------
   const viewVendedor = (P) => {
-    const app = $('#app'); app.replaceChildren();
-    const card = mk('section', 'card'); const kp = mk('div', 'kpis'); const rom = mk('div');
-    const ms = monthSelect(P.meses, () => draw());
-    const head = mk('div', 'tools noprint'); head.append(ms.w);
+    $('#titulo').textContent = 'Olá, ' + P.nome.split(' ')[0];
+    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['romaneio', 'Romaneio']]);
     const draw = () => {
-      const m = ms.s.value, d = P.dados[m] || { fat: 0, notas: 0, ticket: 0, dias: [] }, info = P.meses.find((x) => x.mes === m);
-      kp.replaceChildren(kpi('Faturamento total', brl.format(d.fat), 'vendas emitidas no mês'), kpi('Notas emitidas', String(d.notas), 'notas do sistema', true), kpi('Ticket médio', brl.format(d.ticket), 'por nota do sistema'));
-      if (d.com != null) kp.append(kpi('Comissão estimada', brl.format(d.com), pct(d.taxa) + (info && info.batida === 'sim' ? ' (meta batida)' : ' (meta não batida)'), true));
-      dias(rom, d.dias, false);
+      charts.length = 0;
+      const m = sMes.value, info = P.meses.find((x) => x.mes === m), d = P.dados[m] || { fat: 0, notas: 0, ticket: 0, dias: [] };
+      $('#sub').textContent = 'Suas vendas · ' + (info ? info.label : '');
+      const pv = paineis.visao; pv.replaceChildren();
+      const kp = mk('div', 'kpis');
+      kp.append(kpi('Faturamento', brl.format(d.fat), 'sistema + caderno'), kpi('Notas emitidas', int(d.notas), 'notas do sistema', 'g'), kpi('Ticket médio', brl.format(d.ticket), 'por nota do sistema'));
+      if (d.com != null) kp.append(kpi('Comissão estimada', brl.format(d.com), pct(d.taxa) + (info && info.batida === 'sim' ? ' · meta batida' : ' · meta não batida'), 'g'));
+      const melhor = d.dias.reduce((a, x) => (!a || x.total > a.total ? x : a), null);
+      const c1 = card('por-dia', 'Faturamento por dia', 'wide'); const ch = mk('div', 'chart'); c1.append(ch);
+      if (melhor) c1.append(mk('p', 'note', 'Melhor dia: ' + melhor.d + ' com ' + brl.format(melhor.total) + '. ' + d.dias.length + ' dias com venda.'));
+      const grid = mk('div', 'grid'); grid.append(c1);
+      const nNotas = sum(d.dias, (x) => x.n.length);
+      const tipos = {}; d.dias.forEach((x) => x.n.forEach((n) => { const t = n.t.startsWith('Caderno') ? 'Caderno (manual)' : n.t.split(' ')[0]; tipos[t] = (tipos[t] || 0) + n.v; }));
+      const c2 = card('tipos', 'Por tipo de lançamento');
+      c2.append(barras(Object.entries(tipos).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ nome: k, v, txt: brl.format(v), sub: pct(v / (d.fat || 1)) }))), mk('p', 'note', nNotas + ' lançamentos no mês.'));
+      grid.append(c2);
+      pv.append(kp, grid);
+      colunas(ch, d.dias.map((x) => ({ label: diaCurto(x), full: x.d, partes: [{ s: P.nome, v: x.total }] })), [P.nome]);
+      const pr = paineis.romaneio; pr.replaceChildren(); const cr = card('romaneio', 'Suas vendas, dia a dia', 'wide'); const host = mk('div');
+      cr.append(mk('p', 'note', 'Cada lançamento contabilizado no mês. As vendas do caderno de caixa registram o total por forma de pagamento, não nota a nota. Toque no dia para abrir.'), ctrlRomaneio(host), host);
+      romaneio(host, d.dias, false); pr.append(cr);
     };
-    card.append(mk('h2', '', 'Olá, ' + P.nome.split(' ')[0]), head, kp);
-    const c2 = mk('section', 'card'); const bt = mk('button', 'noprint', 'Imprimir / salvar PDF'); bt.type = 'button'; bt.addEventListener('click', () => window.print());
-    c2.append(mk('h2', '', 'Suas vendas, dia a dia'), mk('p', 'note', 'Cada lançamento foi contabilizado. Vendas de 01 a 06/10 vêm do caderno de caixa, que registra o total por forma de pagamento e não nota a nota. Toque no dia para abrir.'), bt, rom);
-    app.append(card, c2); draw();
-    const rod = mk('p', 'note', 'Dados gerados em ' + P.gerado.split('-').reverse().join('/') + '. Comissão estimada, não substitui o fechamento da folha.'); app.append(rod);
+    sMes.addEventListener('change', draw); draw();
   };
 
+  // ---------- gestão ----------
   const viewAdmin = (P) => {
-    const app = $('#app'); app.replaceChildren();
-    const top = mk('section', 'card'); const kp = mk('div', 'kpis'); const meta = mk('div');
-    const ms = monthSelect(P.meses, () => draw()); const head = mk('div', 'tools noprint'); head.append(ms.w); top.append(mk('h2', '', 'Visão da gestão'), head, kp, meta);
-    const cs = mk('section', 'card'); const cf = mk('section', 'card'); const cm = mk('section', 'card'); const cr = mk('section', 'card');
-    const nomes = Object.keys(P.vendedores); const selR = document.createElement('select'); nomes.forEach((n) => selR.append(new Option(n, n))); selR.addEventListener('change', () => draw());
-    const rw = mk('div'); const rt = mk('div', 'tools noprint'); const sw = mk('div'); sw.append(mk('label', '', 'Romaneio de'), selR); const pb = mk('button', '', 'Imprimir / salvar PDF'); pb.type = 'button'; pb.addEventListener('click', () => window.print()); rt.append(sw, pb);
-    cr.append(mk('h2', '', 'Romaneio por vendedor'), rt, rw);
+    $('#titulo').textContent = 'Vendas Pé de Serra';
+    const nomes = Object.keys(P.vendedores);
+    const fv = mk('div', 'f'); const lv = mk('label', '', 'Vendedor'); lv.htmlFor = 'f-vend'; const sVend = mk('select'); sVend.id = 'f-vend';
+    sVend.append(new Option('Todos', '')); nomes.forEach((n) => sVend.append(new Option(n, n))); fv.append(lv, sVend);
+    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['pag', 'Pagamentos'], ['merc', 'Mercadorias'], ['equipe', 'Equipe e comissão'], ['romaneio', 'Romaneio']], [fv]);
+    let busca = '';
     const draw = () => {
-      const m = ms.s.value, info = P.meses.find((x) => x.mes === m), L = P.loja[m] || { fat: 0, formas: [], merc: [] };
-      const vend = nomes.map((n) => ({ n, d: P.vendedores[n][m] })).filter((x) => x.d);
-      const notas = sum(vend, (x) => x.d.notas), fatS = sum(vend, (x) => x.d.fat);
-      kp.replaceChildren(kpi('Faturamento total', brl.format(L.fat), 'sistema + caderno'), kpi('Notas do sistema', String(notas), '', true), kpi('Ticket médio', brl.format(notas ? sum(vend, (x) => x.d.ticket * x.d.notas) / notas : 0), 'por nota do sistema'));
-      meta.replaceChildren();
-      if (info && info.meta) { const p = L.fat / info.meta; meta.append(mk('p', 'note', 'Meta de ' + brl.format(info.meta) + ': ' + pct(p) + ' atingido. Taxa de comissão: ' + pct(info.taxa) + '.')); const b = mk('div', 'bar b'); const i = document.createElement('i'); i.style.width = Math.min(100, p * 100) + '%'; b.append(i); meta.append(b); }
-      cs.replaceChildren(mk('h2', '', 'Por vendedor')); const w = mk('div', 'wrap'); const t = mk('table'); t.innerHTML = '<thead><tr><th>Vendedor</th><th class="n">Notas</th><th class="n">Faturamento</th><th class="n">Ticket</th><th class="n">Margem</th><th class="n">Comissão</th></tr></thead>'; const tb = mk('tbody');
-      vend.forEach(({ n, d }) => { const tr = mk('tr'); [[n], [String(d.notas), 'n'], [brl.format(d.fat), 'n'], [brl.format(d.ticket), 'n'], [brl.format(d.margem), 'n'], [d.com != null ? brl.format(d.com) : '', 'n']].forEach(([x, c]) => tr.append(mk('td', c || '', x))); tb.append(tr); });
-      t.append(tb); w.append(t); cs.append(w, mk('p', 'note', 'Margem só nos itens com custo cadastrado; vendas do caderno não têm custo. Comissão de 1% sem meta batida e 2% com meta batida, sobre o valor vendido.'));
-      cf.replaceChildren(mk('h2', '', 'Por forma de pagamento')); const mx = Math.max(1, ...L.formas.map((f) => f.v));
-      L.formas.forEach((f) => { const r = mk('div', 'h'); r.style.cssText = 'display:flex;justify-content:space-between;gap:8px'; r.append(mk('span', '', f.f + ' · ' + f.n + ' lanç.'), mk('b', '', brl.format(f.v) + ' · ' + pct(f.v / (L.fat || 1)))); const b = mk('div', 'bar'); const i = document.createElement('i'); i.style.width = (f.v / mx * 100) + '%'; b.append(i); cf.append(r, b); });
-      cm.replaceChildren(mk('h2', '', 'Mercadorias mais vendidas')); const w2 = mk('div', 'wrap'); const t2 = mk('table'); t2.innerHTML = '<thead><tr><th>Mercadoria</th><th class="n">Qtd</th><th class="n">Valor</th><th class="n">Margem</th></tr></thead>'; const tb2 = mk('tbody');
-      L.merc.forEach((x) => { const tr = mk('tr'); tr.append(mk('td', '', x.m), mk('td', 'n', String(x.q).replace('.', ',')), mk('td', 'n', brl.format(x.v)), mk('td', 'n', x.mg == null ? '—' : brl.format(x.mg))); tb2.append(tr); }); t2.append(tb2); w2.append(t2); cm.append(w2, mk('p', 'note', 'Os 60 maiores itens por valor. Margem em branco quando o custo não está cadastrado.'));
-      dias(rw, (P.vendedores[selR.value][m] || { dias: [] }).dias, true);
+      charts.length = 0;
+      const m = sMes.value, info = P.meses.find((x) => x.mes === m), L = P.loja[m] || { fat: 0, formas: [], merc: [] };
+      const todos = nomes.map((n) => ({ n, d: P.vendedores[n][m] })).filter((x) => x.d);
+      const sel = sVend.value ? todos.filter((x) => x.n === sVend.value) : todos;
+      const fat = sum(sel, (x) => x.d.fat), notas = sum(sel, (x) => x.d.notas), fatNf = sum(sel, (x) => x.d.ticket * x.d.notas), margem = sum(sel, (x) => x.d.margem || 0), com = sum(sel, (x) => x.d.com || 0);
+      $('#sub').textContent = (info ? info.label : '') + (sVend.value ? ' · ' + sVend.value : ' · loja toda');
+
+      // Visão geral
+      const pv = paineis.visao; pv.replaceChildren();
+      const kp = mk('div', 'kpis');
+      kp.append(kpi('Faturamento', brl.format(fat), sVend.value ? pct(fat / (L.fat || 1)) + ' da loja' : 'sistema + caderno'));
+      if (!sVend.value && info && info.meta) kp.append(kpi('Meta do mês', pct(L.fat / info.meta), brl.format(info.meta) + ' · ' + (info.batida === 'sim' ? 'batida' : 'não batida'), 'g', L.fat / info.meta));
+      kp.append(kpi('Notas do sistema', int(notas), 'NF-e e NFC-e emitidas', 'g'), kpi('Ticket médio', brl.format(notas ? fatNf / notas : 0), 'por nota do sistema'),
+        kpi('Margem bruta', brl.format(margem), fatNf ? pct(margem / fatNf) + ' das notas' : '', 'a'), kpi('Comissão estimada', brl.format(com), info ? pct(info.taxa) + ' sobre o faturamento' : '', 'a'));
+      const grid = mk('div', 'grid');
+      const c1 = card('por-dia', 'Faturamento por dia', 'wide'); const ch = mk('div', 'chart'); const series = sel.map((x) => x.n); c1.append(legenda(series), ch); grid.append(c1);
+      const c2 = card('vend-barras', 'Faturamento por vendedor');
+      c2.append(barras(todos.slice().sort((a, b) => b.d.fat - a.d.fat).map((x) => ({ nome: x.n, v: x.d.fat, txt: brl.format(x.d.fat), sub: pct(x.d.fat / (L.fat || 1)) }))));
+      const c3 = card('pag-resumo', 'Formas de pagamento (loja)');
+      c3.append(barras(L.formas.slice(0, 6).map((f) => ({ nome: f.f, v: f.v, txt: brl.format(f.v), sub: pct(f.v / (L.fat || 1)) })), 'g'), mk('p', 'note', 'As 6 maiores. Veja todas na aba Pagamentos.'));
+      grid.append(c2, c3); pv.append(kp, grid);
+      const mapa = new Map();
+      sel.forEach((x) => x.d.dias.forEach((dd) => { const e = mapa.get(dd.d) || { label: diaCurto(dd), full: dd.d, partes: [], ord: dd.d.split(' ')[1].split('/').reverse().join('') }; e.partes.push({ s: x.n, v: dd.total }); mapa.set(dd.d, e); }));
+      colunas(ch, [...mapa.values()].sort((a, b) => (a.ord < b.ord ? -1 : 1)), series);
+
+      // Pagamentos (loja inteira)
+      const pp = paineis.pag; pp.replaceChildren(); const gp = mk('div', 'grid');
+      const p1 = card('pagamento', 'Por forma de pagamento');
+      p1.append(barras(L.formas.map((f) => ({ nome: f.f, v: f.v, txt: brl.format(f.v), sub: pct(f.v / (L.fat || 1)) }))));
+      const p2 = card('ticket-forma', 'Lançamentos e ticket médio por forma');
+      p2.append(tabela([['Forma'], ['Lançamentos', 1], ['Valor', 1], ['Ticket médio', 1]], L.formas.map((f) => [f.f, int(f.n), brl.format(f.v), brl.format(f.v / (f.n || 1))]),
+        ['Total', int(sum(L.formas, (f) => f.n)), brl.format(L.fat), '']), mk('p', 'note', 'Loja toda, incluindo o caderno. Pagamentos combinados aparecem com as formas somadas (ex.: Dinheiro + PIX).'));
+      gp.append(p1, p2); pp.append(gp);
+
+      // Mercadorias (loja inteira)
+      const pm = paineis.merc; pm.replaceChildren(); const gm = mk('div', 'grid');
+      const m1 = card('merc-top', 'Top 10 por valor');
+      m1.append(barras(L.merc.slice(0, 10).map((x) => ({ nome: x.m, v: x.v, txt: brl.format(x.v), sub: int(x.q) + ' un.' }))));
+      const m2 = card('merc-margem', 'Top 10 por margem');
+      m2.append(barras(L.merc.filter((x) => x.mg != null).sort((a, b) => b.mg - a.mg).slice(0, 10).map((x) => ({ nome: x.m, v: x.mg, txt: brl.format(x.mg), sub: pct(x.mg / (x.v || 1)) })), 'g'));
+      const m3 = card('mercadorias', 'Mercadorias mais vendidas', 'wide');
+      const tl = mk('div', 'tools noprint'); const fb = mk('div', 'f'); const lb = mk('label', '', 'Buscar mercadoria'); lb.htmlFor = 'f-busca'; const ib = mk('input'); ib.type = 'search'; ib.id = 'f-busca'; ib.value = busca; fb.append(lb, ib); tl.append(fb);
+      const tw = mk('div', 'scroll');
+      const fillM = () => { busca = ib.value; const q = busca.trim().toUpperCase(); const l = L.merc.filter((x) => !q || x.m.toUpperCase().includes(q));
+        tw.replaceChildren(tabela([['Mercadoria'], ['Qtd', 1], ['Valor', 1], ['Margem', 1], ['Margem %', 1]], l.map((x) => [x.m, String(x.q).replace('.', ','), brl.format(x.v), x.mg == null ? '—' : brl.format(x.mg), x.mg == null ? '—' : pct(x.mg / (x.v || 1))]))); };
+      ib.addEventListener('input', fillM); fillM();
+      m3.append(tl, tw, mk('p', 'note', 'Os 60 maiores itens por valor no mês, loja toda. Margem em branco quando o custo não está cadastrado.'));
+      gm.append(m1, m2, m3); pm.append(gm);
+
+      // Equipe e comissão
+      const pe = paineis.equipe; pe.replaceChildren();
+      const e1 = card('vendedores', 'Desempenho por vendedor', 'wide');
+      e1.append(tabela([['Vendedor'], ['Notas', 1], ['Faturamento', 1], ['% da loja', 1], ['Ticket médio', 1], ['Margem bruta', 1], ['Comissão', 1]],
+        todos.map(({ n, d }) => [n, int(d.notas), brl.format(d.fat), pct(d.fat / (L.fat || 1)), brl.format(d.ticket), brl.format(d.margem || 0), d.com != null ? brl.format(d.com) : '—']),
+        ['Total', int(sum(todos, (x) => x.d.notas)), brl.format(L.fat), '100%', '', brl.format(sum(todos, (x) => x.d.margem || 0)), brl.format(sum(todos, (x) => x.d.com || 0))]),
+        mk('p', 'note', 'Margem só nos itens com custo cadastrado; vendas do caderno não têm custo. Comissão de 1% sem meta batida e 2% com meta batida, sobre o faturamento do vendedor.'));
+      const e2 = card('comissao-cfg', 'Metas e comissão por mês', 'wide');
+      e2.append(tabela([['Mês'], ['Meta', 1], ['Faturamento', 1], ['Atingido', 1], ['Meta batida'], ['Taxa', 1]],
+        P.meses.slice().reverse().map((x) => { const f = (P.loja[x.mes] || { fat: 0 }).fat; return [x.label, x.meta ? brl.format(x.meta) : '—', brl.format(f), x.meta ? pct(f / x.meta) : '—', x.batida, pct(x.taxa)]; })));
+      pe.append(e1, e2);
+
+      // Romaneio
+      const pr = paineis.romaneio; pr.replaceChildren();
+      const cr = card('romaneio', 'Romaneio por vendedor', 'wide');
+      const rt = mk('div', 'tools noprint'); const rf = mk('div', 'f'); const rl = mk('label', '', 'Romaneio de'); rl.htmlFor = 'f-rom'; const sr = mk('select'); sr.id = 'f-rom';
+      todos.forEach((x) => sr.append(new Option(x.n, x.n))); if (sVend.value) sr.value = sVend.value; rf.append(rl, sr); rt.append(rf);
+      const host = mk('div'); const fillR = () => { const x = todos.find((t) => t.n === sr.value); romaneio(host, x ? x.d.dias : [], true); };
+      sr.addEventListener('change', fillR); cr.append(rt, ctrlRomaneio(host), host); fillR(); pr.append(cr);
     };
-    app.append(top, cs, cf, cm, cr, mk('p', 'note', 'Dados gerados em ' + P.gerado.split('-').reverse().join('/') + '.')); draw();
+    sMes.addEventListener('change', draw); sVend.addEventListener('change', draw); draw();
   };
 
+  // ---------- entrada ----------
   fetch('data/usuarios.json').then((r) => r.json()).then((us) => { us.forEach((u) => $('#usr').append(new Option(u.nome, u.id))); });
   $('#form').addEventListener('submit', async (e) => {
-    e.preventDefault(); const err = $('#err'); err.textContent = ''; const go = $('#go'); go.disabled = true; go.textContent = 'Abrindo...';
+    e.preventDefault(); const err = $('#err'); err.textContent = ''; const go = $('#go'); go.disabled = true; go.textContent = 'Abrindo…';
     try {
       const id = $('#usr').value; const blob = await (await fetch('data/' + id + '.json', { cache: 'no-store' })).json();
       const P = await decrypt(blob, $('#pw').value);
-      $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#sair').classList.remove('hidden'); $('#quem').textContent = P.nome;
-      $('#pw').value = ''; (P.perfil === 'admin' ? viewAdmin : viewVendedor)(P);
-    } catch (x) { err.textContent = 'Senha incorreta ou dados indisponíveis.'; }
+      $('#pw').value = ''; $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#acts').classList.remove('hidden');
+      (P.perfil === 'admin' ? viewAdmin : viewVendedor)(P);
+    } catch (x) { err.textContent = 'Senha incorreta ou dados indisponíveis.'; console.error(x); }
     go.disabled = false; go.textContent = 'Entrar';
   });
   $('#sair').addEventListener('click', () => location.reload());
+  $('#imprimir').addEventListener('click', () => window.print());
 })();
 </script>
 </body>
