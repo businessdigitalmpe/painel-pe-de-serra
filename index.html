@@ -277,6 +277,37 @@ details.day > summary span:first-child { flex: 1; }
   };
   const diaCurto = (d) => d.d.split(' ')[1].slice(0, 2);
 
+  // Aba de mercadorias da loja. comMargem = só para a gestão.
+  const painelMerc = (pm, L, comMargem, busca) => {
+    pm.replaceChildren(); const gm = mk('div', 'grid'); const merc = L.merc || [];
+    const m1 = card('merc-top', 'Top 10 por valor' + (comMargem ? '' : ' (loja)'));
+    m1.append(barras(merc.slice(0, 10).map((x) => ({ nome: x.m, v: x.v, txt: brl.format(x.v), sub: int(x.q) + ' un.' }))));
+    gm.append(m1);
+    if (comMargem) {
+      const m2 = card('merc-margem', 'Top 10 por margem');
+      m2.append(barras(merc.filter((x) => x.mg != null).sort((a, b) => b.mg - a.mg).slice(0, 10).map((x) => ({ nome: x.m, v: x.mg, txt: brl.format(x.mg), sub: pct(x.mg / (x.v || 1)) })), 'g'));
+      gm.append(m2);
+    } else {
+      const m2 = card('merc-qtd', 'Top 10 por quantidade (loja)');
+      m2.append(barras(merc.slice().sort((a, b) => b.q - a.q).slice(0, 10).map((x) => ({ nome: x.m, v: x.q, txt: int(x.q) + ' un.', sub: brl.format(x.v) })), 'g'));
+      gm.append(m2);
+    }
+    const m3 = card('mercadorias', 'Mercadorias vendidas na loja', 'wide');
+    const tl = mk('div', 'tools noprint'); const fb = mk('div', 'f'); const lb = mk('label', '', 'Buscar mercadoria'); lb.htmlFor = 'f-busca'; const ib = mk('input'); ib.type = 'search'; ib.id = 'f-busca'; ib.value = busca.v; fb.append(lb, ib); tl.append(fb);
+    const tw = mk('div', 'scroll'); const cont = mk('p', 'note');
+    const cols = comMargem ? [['Mercadoria'], ['Qtd', 1], ['Valor', 1], ['Margem', 1], ['Margem %', 1]] : [['Mercadoria'], ['Qtd', 1], ['Valor', 1], ['% da loja', 1]];
+    const fillM = () => {
+      busca.v = ib.value; const q = busca.v.trim().toUpperCase(); const l = merc.filter((x) => !q || x.m.toUpperCase().includes(q));
+      tw.replaceChildren(tabela(cols, l.map((x) => comMargem
+        ? [x.m, String(x.q).replace('.', ','), brl.format(x.v), x.mg == null ? '—' : brl.format(x.mg), x.mg == null ? '—' : pct(x.mg / (x.v || 1))]
+        : [x.m, String(x.q).replace('.', ','), brl.format(x.v), pct(x.v / (L.fat || 1))])));
+      cont.textContent = l.length + ' de ' + merc.length + ' mercadorias' + (q ? ' encontradas' : '') + '.';
+    };
+    ib.addEventListener('input', fillM); fillM();
+    m3.append(tl, cont, tw, mk('p', 'note', 'Todas as mercadorias vendidas no mês pela loja, da maior para a menor em valor. Vendas do caderno não têm detalhe de mercadoria.' + (comMargem ? ' Margem em branco quando o custo não está cadastrado.' : '')));
+    gm.append(m3); pm.append(gm);
+  };
+
   // ---------- estrutura comum: filtros + abas ----------
   const montar = (P, abas, extraFiltros) => {
     const app = $('#app'); app.replaceChildren(); charts.length = 0;
@@ -300,15 +331,20 @@ details.day > summary span:first-child { flex: 1; }
   // ---------- vendedor ----------
   const viewVendedor = (P) => {
     $('#titulo').textContent = 'Olá, ' + P.nome.split(' ')[0];
-    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['romaneio', 'Romaneio']]);
+    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['merc', 'Mercadorias da loja'], ['romaneio', 'Romaneio']]);
+    const buscaV = { v: '' };
     const draw = () => {
       charts.length = 0;
       const m = sMes.value, info = P.meses.find((x) => x.mes === m), d = P.dados[m] || { fat: 0, notas: 0, ticket: 0, dias: [] };
+      const L = (P.loja || {})[m] || { fat: 0, merc: [] };
       $('#sub').textContent = 'Suas vendas · ' + (info ? info.label : '');
       const pv = paineis.visao; pv.replaceChildren();
       const kp = mk('div', 'kpis');
-      kp.append(kpi('Faturamento', brl.format(d.fat), 'sistema + caderno'), kpi('Notas emitidas', int(d.notas), 'notas do sistema', 'g'), kpi('Ticket médio', brl.format(d.ticket), 'por nota do sistema'));
+      kp.append(kpi('Seu faturamento', brl.format(d.fat), L.fat ? pct(d.fat / L.fat) + ' da loja' : 'sistema + caderno'));
+      if (P.loja) kp.append(kpi('Faturamento da loja', brl.format(L.fat), info && info.meta ? pct(L.fat / info.meta) + ' da meta de ' + brl0.format(info.meta) : 'todos os vendedores', 'a', info && info.meta ? L.fat / info.meta : null));
+      kp.append(kpi('Notas emitidas', int(d.notas), 'notas do sistema', 'g'), kpi('Ticket médio', brl.format(d.ticket), 'por nota do sistema'));
       if (d.com != null) kp.append(kpi('Comissão estimada', brl.format(d.com), pct(d.taxa) + (info && info.batida === 'sim' ? ' · meta batida' : ' · meta não batida'), 'g'));
+      painelMerc(paineis.merc, L, false, buscaV);
       const melhor = d.dias.reduce((a, x) => (!a || x.total > a.total ? x : a), null);
       const c1 = card('por-dia', 'Faturamento por dia', 'wide'); const ch = mk('div', 'chart'); c1.append(ch);
       if (melhor) c1.append(mk('p', 'note', 'Melhor dia: ' + melhor.d + ' com ' + brl.format(melhor.total) + '. ' + d.dias.length + ' dias com venda.'));
@@ -334,7 +370,7 @@ details.day > summary span:first-child { flex: 1; }
     const fv = mk('div', 'f'); const lv = mk('label', '', 'Vendedor'); lv.htmlFor = 'f-vend'; const sVend = mk('select'); sVend.id = 'f-vend';
     sVend.append(new Option('Todos', '')); nomes.forEach((n) => sVend.append(new Option(n, n))); fv.append(lv, sVend);
     const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['pag', 'Pagamentos'], ['merc', 'Mercadorias'], ['equipe', 'Equipe e comissão'], ['romaneio', 'Romaneio']], [fv]);
-    let busca = '';
+    const busca = { v: '' };
     const draw = () => {
       charts.length = 0;
       const m = sMes.value, info = P.meses.find((x) => x.mes === m), L = P.loja[m] || { fat: 0, formas: [], merc: [] };
@@ -371,19 +407,7 @@ details.day > summary span:first-child { flex: 1; }
       gp.append(p1, p2); pp.append(gp);
 
       // Mercadorias (loja inteira)
-      const pm = paineis.merc; pm.replaceChildren(); const gm = mk('div', 'grid');
-      const m1 = card('merc-top', 'Top 10 por valor');
-      m1.append(barras(L.merc.slice(0, 10).map((x) => ({ nome: x.m, v: x.v, txt: brl.format(x.v), sub: int(x.q) + ' un.' }))));
-      const m2 = card('merc-margem', 'Top 10 por margem');
-      m2.append(barras(L.merc.filter((x) => x.mg != null).sort((a, b) => b.mg - a.mg).slice(0, 10).map((x) => ({ nome: x.m, v: x.mg, txt: brl.format(x.mg), sub: pct(x.mg / (x.v || 1)) })), 'g'));
-      const m3 = card('mercadorias', 'Mercadorias mais vendidas', 'wide');
-      const tl = mk('div', 'tools noprint'); const fb = mk('div', 'f'); const lb = mk('label', '', 'Buscar mercadoria'); lb.htmlFor = 'f-busca'; const ib = mk('input'); ib.type = 'search'; ib.id = 'f-busca'; ib.value = busca; fb.append(lb, ib); tl.append(fb);
-      const tw = mk('div', 'scroll');
-      const fillM = () => { busca = ib.value; const q = busca.trim().toUpperCase(); const l = L.merc.filter((x) => !q || x.m.toUpperCase().includes(q));
-        tw.replaceChildren(tabela([['Mercadoria'], ['Qtd', 1], ['Valor', 1], ['Margem', 1], ['Margem %', 1]], l.map((x) => [x.m, String(x.q).replace('.', ','), brl.format(x.v), x.mg == null ? '—' : brl.format(x.mg), x.mg == null ? '—' : pct(x.mg / (x.v || 1))]))); };
-      ib.addEventListener('input', fillM); fillM();
-      m3.append(tl, tw, mk('p', 'note', 'Os 60 maiores itens por valor no mês, loja toda. Margem em branco quando o custo não está cadastrado.'));
-      gm.append(m1, m2, m3); pm.append(gm);
+      painelMerc(paineis.merc, L, true, busca);
 
       // Equipe e comissão
       const pe = paineis.equipe; pe.replaceChildren();
