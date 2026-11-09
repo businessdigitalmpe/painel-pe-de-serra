@@ -38,7 +38,7 @@ body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(-
 
 /* Controles */
 select, input, button { font: inherit; color: var(--fg); }
-select, input[type=password], input[type=search] { width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+select, input[type=password], input[type=search], input[type=date] { width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 .btn { padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); cursor: pointer; white-space: nowrap; }
 .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
 .btn:disabled { opacity: .6; cursor: progress; }
@@ -277,10 +277,41 @@ details.day > summary span:first-child { flex: 1; }
   };
   const diaCurto = (d) => d.d.split(' ')[1].slice(0, 2);
 
-  // Aba de mercadorias da loja. comMargem = só para a gestão.
-  const painelMerc = (pm, L, comMargem, busca) => {
-    pm.replaceChildren(); const gm = mk('div', 'grid'); const merc = L.merc || [];
-    const m1 = card('merc-top', 'Top 10 por valor' + (comMargem ? '' : ' (loja)'));
+  // ---------- filtros: apoio ----------
+  const tipoDe = (t) => (t.startsWith('Caderno') ? 'Caderno' : t.split(' ')[0]);
+  const isoDe = (dd) => dd.iso || dd.d.split(' ')[1].split('/').reverse().join('-');
+  const campo = (id, rot, el) => { const f = mk('div', 'f'); const l = mk('label', '', rot); l.htmlFor = id; el.id = id; f.append(l, el); return f; };
+  const selOpts = (el, ops, todos) => { const v = el.value; el.replaceChildren(new Option(todos, '')); ops.forEach((o) => el.append(new Option(o, o))); el.value = ops.includes(v) ? v : ''; };
+  const dateIn = () => { const i = mk('input'); i.type = 'date'; return i; };
+  const fimMes = (mes) => { const [y, m] = mes.split('-').map(Number); return mes + '-' + String(new Date(y, m, 0).getDate()).padStart(2, '0'); };
+  const naData = (iso, de, ate) => (!de || iso >= de) && (!ate || iso <= ate);
+  const periodo = (de, ate) => (de && ate ? (de === ate ? ' · dia ' + dataBR(de) : ' · ' + dataBR(de) + ' a ' + dataBR(ate)) : de ? ' · a partir de ' + dataBR(de) : ate ? ' · até ' + dataBR(ate) : '');
+  const botaoLimpar = () => { const b = mk('button', 'btn', 'Limpar filtros'); b.type = 'button'; const f = mk('div', 'f'); f.append(mk('label', '', ' '), b); return { f, b }; };
+  const porDia = (ns) => {
+    const m = new Map();
+    ns.forEach((n) => { const e = m.get(n.iso) || { iso: n.iso, d: n.dl, total: 0, n: [] }; e.total += n.v; e.n.push(n); m.set(n.iso, e); });
+    return [...m.values()].sort((a, b) => (a.iso < b.iso ? -1 : 1));
+  };
+  // agrega itens [{m, q, v, c?, s}] em mercadorias e seções; item sem m = sem detalhe
+  const agregar = (itens) => {
+    const mc = new Map(), sc = new Map();
+    itens.forEach((it) => {
+      const s = it.m ? it.s || 'Sem seção' : 'Sem detalhe';
+      const y = sc.get(s) || { s, v: 0, mg: 0, vc: 0 }; y.v += it.v; if (it.c != null) { y.mg += it.v - it.c; y.vc += it.v; } sc.set(s, y);
+      if (!it.m) return;
+      const x = mc.get(it.m) || { m: it.m, q: 0, v: 0, mg: 0, sem: false };
+      x.q += it.q || 0; x.v += it.v; if (it.c != null) x.mg += it.v - it.c; else x.sem = true; mc.set(it.m, x);
+    });
+    return {
+      merc: [...mc.values()].map((x) => ({ m: x.m, q: Math.round(x.q * 100) / 100, v: x.v, mg: x.sem ? null : x.mg })).sort((a, b) => b.v - a.v),
+      secoes: [...sc.values()].sort((a, b) => b.v - a.v),
+    };
+  };
+
+  // Aba de mercadorias. comMargem = só para a gestão.
+  const painelMerc = (pm, merc, secoes, comMargem, busca) => {
+    pm.replaceChildren(); const gm = mk('div', 'grid'); const tot = sum(secoes, (x) => x.v) || 1;
+    const m1 = card('merc-top', 'Top 10 por valor');
     m1.append(barras(merc.slice(0, 10).map((x) => ({ nome: x.m, v: x.v, txt: brl.format(x.v), sub: int(x.q) + ' un.' }))));
     gm.append(m1);
     if (comMargem) {
@@ -288,29 +319,29 @@ details.day > summary span:first-child { flex: 1; }
       m2.append(barras(merc.filter((x) => x.mg != null).sort((a, b) => b.mg - a.mg).slice(0, 10).map((x) => ({ nome: x.m, v: x.mg, txt: brl.format(x.mg), sub: pct(x.mg / (x.v || 1)) })), 'g'));
       gm.append(m2);
     } else {
-      const m2 = card('merc-qtd', 'Top 10 por quantidade (loja)');
+      const m2 = card('merc-qtd', 'Top 10 por quantidade');
       m2.append(barras(merc.slice().sort((a, b) => b.q - a.q).slice(0, 10).map((x) => ({ nome: x.m, v: x.q, txt: int(x.q) + ' un.', sub: brl.format(x.v) })), 'g'));
       gm.append(m2);
     }
-    if (L.secoes && L.secoes.length) {
-      const ms = card('secoes', 'Vendas por seção' + (comMargem ? '' : ' (loja)'), 'wide'); const tot = sum(L.secoes, (x) => x.v) || 1;
-      ms.append(barras(L.secoes.map((x) => ({ nome: x.s, v: x.v, txt: brl.format(x.v), sub: comMargem ? (x.vc ? 'margem ' + pct(x.mg / x.vc) : 'sem custo') : pct(x.v / tot) }))),
+    if (secoes.length) {
+      const ms = card('secoes', 'Vendas por seção', 'wide');
+      ms.append(barras(secoes.map((x) => ({ nome: x.s, v: x.v, txt: brl.format(x.v), sub: comMargem ? (x.vc ? 'margem ' + pct(x.mg / x.vc) : 'sem custo') : pct(x.v / tot) }))),
         mk('p', 'note', 'Itens das notas do sistema; vendas do caderno não têm detalhe.' + (comMargem ? ' Margem % calculada só sobre itens com custo confiável.' : '')));
       gm.append(ms);
     }
     const m3 = card('mercadorias', 'Mercadorias vendidas na loja', 'wide');
-    const tl = mk('div', 'tools noprint'); const fb = mk('div', 'f'); const lb = mk('label', '', 'Buscar mercadoria'); lb.htmlFor = 'f-busca'; const ib = mk('input'); ib.type = 'search'; ib.id = 'f-busca'; ib.value = busca.v; fb.append(lb, ib); tl.append(fb);
+    const tl = mk('div', 'tools noprint'); const ib = mk('input'); ib.type = 'search'; ib.value = busca.v; tl.append(campo('f-busca', 'Buscar mercadoria', ib));
     const tw = mk('div', 'scroll'); const cont = mk('p', 'note');
-    const cols = comMargem ? [['Mercadoria'], ['Qtd', 1], ['Valor', 1], ['Margem', 1], ['Margem %', 1]] : [['Mercadoria'], ['Qtd', 1], ['Valor', 1], ['% da loja', 1]];
+    const cols = comMargem ? [['Mercadoria'], ['Qtd', 1], ['Valor', 1], ['Margem', 1], ['Margem %', 1]] : [['Mercadoria'], ['Qtd', 1], ['Valor', 1], ['% do total', 1]];
     const fillM = () => {
       busca.v = ib.value; const q = busca.v.trim().toUpperCase(); const l = merc.filter((x) => !q || x.m.toUpperCase().includes(q));
       tw.replaceChildren(tabela(cols, l.map((x) => comMargem
         ? [x.m, String(x.q).replace('.', ','), brl.format(x.v), x.mg == null ? '—' : brl.format(x.mg), x.mg == null ? '—' : pct(x.mg / (x.v || 1))]
-        : [x.m, String(x.q).replace('.', ','), brl.format(x.v), pct(x.v / (L.fat || 1))])));
+        : [x.m, String(x.q).replace('.', ','), brl.format(x.v), pct(x.v / tot)])));
       cont.textContent = l.length + ' de ' + merc.length + ' mercadorias' + (q ? ' encontradas' : '') + '.';
     };
     ib.addEventListener('input', fillM); fillM();
-    m3.append(tl, cont, tw, mk('p', 'note', 'Todas as mercadorias vendidas no mês pela loja, da maior para a menor em valor. Vendas do caderno não têm detalhe de mercadoria.' + (comMargem ? ' Margem em branco quando o custo não está cadastrado.' : '')));
+    m3.append(tl, cont, tw, mk('p', 'note', 'Todas as mercadorias vendidas pela loja no período filtrado, da maior para a menor em valor.' + (comMargem ? ' Margem em branco quando o custo não está cadastrado ou é suspeito.' : '')));
     gm.append(m3); pm.append(gm);
   };
 
@@ -318,8 +349,7 @@ details.day > summary span:first-child { flex: 1; }
   const montar = (P, abas, extraFiltros) => {
     const app = $('#app'); app.replaceChildren(); charts.length = 0;
     const fil = mk('section', 'filters noprint'); fil.id = 'filtros';
-    const fm = mk('div', 'f'); fm.append(mk('label', '', 'Mês')); const sMes = mk('select'); sMes.id = 'f-mes';
-    P.meses.slice().reverse().forEach((m) => sMes.append(new Option(m.label, m.mes))); fm.querySelector('label').htmlFor = 'f-mes'; fm.append(sMes); fil.append(fm);
+    const sMes = mk('select'); P.meses.slice().reverse().forEach((m) => sMes.append(new Option(m.label, m.mes))); fil.append(campo('f-mes', 'Mês', sMes));
     (extraFiltros || []).forEach((e) => fil.append(e));
     const nav = mk('nav', 'tabs noprint'); nav.setAttribute('role', 'tablist');
     const paineis = {};
@@ -330,137 +360,169 @@ details.day > summary span:first-child { flex: 1; }
       nav.append(b);
     });
     app.append(fil, nav, ...Object.values(paineis));
-    const rod = mk('p', 'note', 'Dados gerados em ' + dataBR(P.gerado) + '. Comissão estimada: não substitui o fechamento da folha.'); app.append(rod);
+    app.append(mk('p', 'note', 'Dados gerados em ' + dataBR(P.gerado) + '. Comissão estimada: não substitui o fechamento da folha.'));
     return { sMes, paineis };
   };
 
   // ---------- vendedor ----------
   const viewVendedor = (P) => {
     $('#titulo').textContent = 'Olá, ' + P.nome.split(' ')[0];
-    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['merc', 'Mercadorias da loja'], ['romaneio', 'Romaneio']]);
-    const buscaV = { v: '' };
+    const sDe = dateIn(), sAte = dateIn(), sTipo = mk('select'), sSec = mk('select'); const lp = botaoLimpar();
+    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['merc', 'Mercadorias da loja'], ['romaneio', 'Romaneio']],
+      [campo('f-de', 'De', sDe), campo('f-ate', 'Até', sAte), campo('f-tipo', 'Tipo de nota', sTipo), campo('f-secao', 'Seção (mercadorias)', sSec), lp.f]);
+    const busca = { v: '' };
+    const notas = (m) => ((P.dados[m] || {}).dias || []).flatMap((dd) => dd.n.map((n) => ({ ...n, iso: isoDe(dd), dl: dd.d, tipo: tipoDe(n.t) })));
+    const prepMes = () => {
+      const m = sMes.value; sDe.min = sAte.min = m + '-01'; sDe.max = sAte.max = fimMes(m); sDe.value = sAte.value = '';
+      selOpts(sTipo, [...new Set(notas(m).map((n) => n.tipo))].sort(), 'Todos');
+      const L = (P.loja || {})[m] || { itens: [] }; selOpts(sSec, [...new Set((L.itens || []).filter((x) => x[1]).map((x) => x[4]))].sort(), 'Todas');
+    };
     const draw = () => {
       charts.length = 0;
-      const m = sMes.value, info = P.meses.find((x) => x.mes === m), d = P.dados[m] || { fat: 0, notas: 0, ticket: 0, dias: [] };
-      const L = (P.loja || {})[m] || { fat: 0, merc: [] };
-      $('#sub').textContent = 'Suas vendas · ' + (info ? info.label : '');
+      const m = sMes.value, info = P.meses.find((x) => x.mes === m), d = P.dados[m] || { taxa: null }, L = (P.loja || {})[m] || { fat: 0, dias: [], itens: [] };
+      const de = sDe.value, ate = sAte.value, porData = de || ate;
+      const ns = notas(m).filter((n) => naData(n.iso, de, ate) && (!sTipo.value || n.tipo === sTipo.value));
+      const nf = ns.filter((n) => n.tipo !== 'Caderno');
+      const fat = sum(ns, (n) => n.v), fatNf = sum(nf, (n) => n.v);
+      const lojaFat = porData ? sum((L.dias || []).filter((x) => naData(x.iso, de, ate)), (x) => x.v) : L.fat;
+      $('#sub').textContent = 'Suas vendas · ' + (info ? info.label : '') + periodo(de, ate) + (sTipo.value ? ' · ' + sTipo.value : '');
       const pv = paineis.visao; pv.replaceChildren();
       const kp = mk('div', 'kpis');
-      kp.append(kpi('Seu faturamento', brl.format(d.fat), L.fat ? pct(d.fat / L.fat) + ' da loja' : 'sistema + caderno'));
-      if (P.loja) kp.append(kpi('Faturamento da loja', brl.format(L.fat), info && info.meta ? pct(L.fat / info.meta) + ' da meta de ' + brl0.format(info.meta) : 'todos os vendedores', 'a', info && info.meta ? L.fat / info.meta : null));
-      kp.append(kpi('Notas emitidas', int(d.notas), 'notas do sistema', 'g'), kpi('Ticket médio', brl.format(d.ticket), 'por nota do sistema'));
-      if (d.com != null) kp.append(kpi('Comissão estimada', brl.format(d.com), pct(d.taxa) + (info && info.batida === 'sim' ? ' · meta batida' : ' · meta não batida'), 'g'));
-      painelMerc(paineis.merc, L, false, buscaV);
-      const melhor = d.dias.reduce((a, x) => (!a || x.total > a.total ? x : a), null);
+      kp.append(kpi('Seu faturamento', brl.format(fat), lojaFat ? pct(fat / lojaFat) + ' da loja no período' : 'sistema + caderno'));
+      if (P.loja) kp.append(kpi('Faturamento da loja', brl.format(lojaFat), porData ? 'no período filtrado' : info && info.meta ? pct(L.fat / info.meta) + ' da meta de ' + brl0.format(info.meta) : 'todos os vendedores', 'a', !porData && info && info.meta ? L.fat / info.meta : null));
+      kp.append(kpi('Notas emitidas', int(nf.length), 'notas do sistema', 'g'), kpi('Ticket médio', brl.format(nf.length ? fatNf / nf.length : 0), 'por nota do sistema'));
+      if (d.taxa != null) kp.append(kpi('Comissão estimada', brl.format(fat * d.taxa), pct(d.taxa) + (info && info.batida === 'sim' ? ' · meta batida' : ' · meta não batida'), 'g'));
+      const dias = porDia(ns); const melhor = dias.reduce((a, x) => (!a || x.total > a.total ? x : a), null);
       const c1 = card('por-dia', 'Faturamento por dia', 'wide'); const ch = mk('div', 'chart'); c1.append(ch);
-      if (melhor) c1.append(mk('p', 'note', 'Melhor dia: ' + melhor.d + ' com ' + brl.format(melhor.total) + '. ' + d.dias.length + ' dias com venda.'));
-      const grid = mk('div', 'grid'); grid.append(c1);
-      const nNotas = sum(d.dias, (x) => x.n.length);
-      const tipos = {}; d.dias.forEach((x) => x.n.forEach((n) => { const t = n.t.startsWith('Caderno') ? 'Caderno (manual)' : n.t.split(' ')[0]; tipos[t] = (tipos[t] || 0) + n.v; }));
+      if (melhor) c1.append(mk('p', 'note', 'Melhor dia: ' + melhor.d + ' com ' + brl.format(melhor.total) + '. ' + dias.length + ' dias com venda.'));
+      const tipos = {}; ns.forEach((n) => { tipos[n.tipo] = (tipos[n.tipo] || 0) + n.v; });
       const c2 = card('tipos', 'Por tipo de lançamento');
-      c2.append(barras(Object.entries(tipos).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ nome: k, v, txt: brl.format(v), sub: pct(v / (d.fat || 1)) }))), mk('p', 'note', nNotas + ' lançamentos no mês.'));
-      grid.append(c2);
-      pv.append(kp, grid);
-      colunas(ch, d.dias.map((x) => ({ label: diaCurto(x), full: x.d, partes: [{ s: P.nome, v: x.total }] })), [P.nome]);
+      c2.append(barras(Object.entries(tipos).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ nome: k === 'Caderno' ? 'Caderno (manual)' : k, v, txt: brl.format(v), sub: pct(v / (fat || 1)) }))), mk('p', 'note', ns.length + ' lançamentos no período.'));
+      const grid = mk('div', 'grid'); grid.append(c1, c2); pv.append(kp, grid);
+      colunas(ch, dias.map((x) => ({ label: diaCurto(x), full: x.d, partes: [{ s: P.nome, v: x.total }] })), [P.nome]);
+      const its = (L.itens || []).filter((x) => naData(x[0], de, ate) && (!sSec.value || x[4] === sSec.value)).map((x) => ({ m: x[1], q: x[2], v: x[3], s: x[4] }));
+      const ag = agregar(its); painelMerc(paineis.merc, ag.merc, ag.secoes, false, busca);
       const pr = paineis.romaneio; pr.replaceChildren(); const cr = card('romaneio', 'Suas vendas, dia a dia', 'wide'); const host = mk('div');
-      cr.append(mk('p', 'note', 'Cada lançamento contabilizado no mês. As vendas do caderno de caixa registram o total por forma de pagamento, não nota a nota. Toque no dia para abrir.'), ctrlRomaneio(host), host);
-      romaneio(host, d.dias, false); pr.append(cr);
+      cr.append(mk('p', 'note', 'Cada lançamento contabilizado no período. As vendas do caderno de caixa registram o total por forma de pagamento, não nota a nota. Toque no dia para abrir.'), ctrlRomaneio(host), host);
+      romaneio(host, dias, false); pr.append(cr);
     };
-    sMes.addEventListener('change', draw); draw();
+    sMes.addEventListener('change', () => { prepMes(); draw(); });
+    [sDe, sAte, sTipo, sSec].forEach((e) => e.addEventListener('change', draw));
+    lp.b.addEventListener('click', () => { [sDe, sAte, sTipo, sSec].forEach((e) => (e.value = '')); draw(); });
+    prepMes(); draw();
   };
 
   // ---------- gestão ----------
   const viewAdmin = (P) => {
     $('#titulo').textContent = 'Vendas Pé de Serra';
-    const nomes = Object.keys(P.vendedores);
-    const fv = mk('div', 'f'); const lv = mk('label', '', 'Vendedor'); lv.htmlFor = 'f-vend'; const sVend = mk('select'); sVend.id = 'f-vend';
-    sVend.append(new Option('Todos', '')); nomes.forEach((n) => sVend.append(new Option(n, n))); fv.append(lv, sVend);
-    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['pag', 'Pagamentos'], ['merc', 'Mercadorias'], ['equipe', 'Equipe e comissão'], ['romaneio', 'Romaneio'], ['alertas', 'Alertas']], [fv]);
-    const busca = { v: '' };
+    const sDe = dateIn(), sAte = dateIn(), sVend = mk('select'), sForma = mk('select'), sTipo = mk('select'), sSec = mk('select'); const lp = botaoLimpar();
+    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['pag', 'Pagamentos'], ['merc', 'Mercadorias'], ['equipe', 'Equipe e comissão'], ['romaneio', 'Romaneio'], ['alertas', 'Alertas']],
+      [campo('f-de', 'De', sDe), campo('f-ate', 'Até', sAte), campo('f-vend', 'Vendedor', sVend), campo('f-forma', 'Forma de pagamento', sForma), campo('f-tipo', 'Tipo de nota', sTipo), campo('f-secao', 'Seção (mercadorias)', sSec), lp.f]);
+    const busca = { v: '' }; let romSel = '';
+    const notas = (m) => Object.keys(P.vendedores).flatMap((vend) => ((P.vendedores[vend][m] || {}).dias || []).flatMap((dd) => dd.n.map((n) => ({ ...n, vend, iso: isoDe(dd), dl: dd.d, tipo: tipoDe(n.t) }))));
+    const prepMes = () => {
+      const m = sMes.value; sDe.min = sAte.min = m + '-01'; sDe.max = sAte.max = fimMes(m); sDe.value = sAte.value = '';
+      const ns = notas(m);
+      selOpts(sVend, Object.keys(P.vendedores).filter((v) => P.vendedores[v][m]), 'Todos');
+      selOpts(sForma, [...new Set(ns.map((n) => n.f))].sort(), 'Todas');
+      selOpts(sTipo, [...new Set(ns.map((n) => n.tipo))].sort(), 'Todos');
+      selOpts(sSec, [...new Set(ns.flatMap((n) => n.i.filter((i) => i.m).map((i) => i.s)))].sort(), 'Todas');
+    };
     const draw = () => {
       charts.length = 0;
-      const m = sMes.value, info = P.meses.find((x) => x.mes === m), L = P.loja[m] || { fat: 0, formas: [], merc: [] };
-      const todos = nomes.map((n) => ({ n, d: P.vendedores[n][m] })).filter((x) => x.d);
-      const sel = sVend.value ? todos.filter((x) => x.n === sVend.value) : todos;
-      const fat = sum(sel, (x) => x.d.fat), notas = sum(sel, (x) => x.d.notas), fatNf = sum(sel, (x) => x.d.ticket * x.d.notas), margem = sum(sel, (x) => x.d.margem || 0), com = sum(sel, (x) => x.d.com || 0);
-      $('#sub').textContent = (info ? info.label : '') + (sVend.value ? ' · ' + sVend.value : ' · loja toda');
+      const m = sMes.value, info = P.meses.find((x) => x.mes === m), L = P.loja[m] || { fat: 0 };
+      const de = sDe.value, ate = sAte.value;
+      const ns = notas(m).filter((n) => naData(n.iso, de, ate) && (!sVend.value || n.vend === sVend.value) && (!sForma.value || n.f === sForma.value) && (!sTipo.value || n.tipo === sTipo.value));
+      const filtrado = de || ate || sVend.value || sForma.value || sTipo.value;
+      const taxaV = (v) => (P.vendedores[v][m] || {}).taxa;
+      const res = (l) => { const nf = l.filter((n) => n.tipo !== 'Caderno'); const fat = sum(l, (n) => n.v), fatNf = sum(nf, (n) => n.v);
+        return { fat, notas: nf.length, ticket: nf.length ? fatNf / nf.length : 0, fatNf, margem: sum(nf, (n) => sum(n.i, (i) => (i.c != null ? i.v - i.c : 0))), com: sum(l, (n) => (taxaV(n.vend) ? n.v * taxaV(n.vend) : 0)) }; };
+      const R = res(ns);
+      const nomes = [...new Set(ns.map((n) => n.vend))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      const porVend = nomes.map((n) => ({ n, r: res(ns.filter((x) => x.vend === n)), taxa: taxaV(n) })).sort((a, b) => b.r.fat - a.r.fat);
+      const filtros = [sVend.value, sForma.value, sTipo.value].filter(Boolean).join(' · ');
+      $('#sub').textContent = (info ? info.label : '') + periodo(de, ate) + ' · ' + (filtros || 'loja toda');
 
       // Visão geral
       const pv = paineis.visao; pv.replaceChildren();
       const kp = mk('div', 'kpis');
-      kp.append(kpi('Faturamento', brl.format(fat), sVend.value ? pct(fat / (L.fat || 1)) + ' da loja' : 'sistema + caderno'));
-      if (!sVend.value && info && info.meta) kp.append(kpi('Meta do mês', pct(L.fat / info.meta), brl.format(info.meta) + ' · ' + (info.batida === 'sim' ? 'batida' : 'não batida'), 'g', L.fat / info.meta));
-      kp.append(kpi('Notas do sistema', int(notas), 'NF-e e NFC-e emitidas', 'g'), kpi('Ticket médio', brl.format(notas ? fatNf / notas : 0), 'por nota do sistema'),
-        kpi('Margem bruta', brl.format(margem), fatNf ? pct(margem / fatNf) + ' das notas' : '', 'a'), kpi('Comissão estimada', brl.format(com), info ? pct(info.taxa) + ' sobre o faturamento' : '', 'a'));
+      kp.append(kpi('Faturamento', brl.format(R.fat), filtrado ? pct(R.fat / (L.fat || 1)) + ' do mês da loja' : 'sistema + caderno'));
+      if (info && info.meta) kp.append(kpi('Meta do mês', pct(L.fat / info.meta), brl.format(info.meta) + ' · ' + (info.batida === 'sim' ? 'batida' : 'não batida') + ' · mês inteiro', 'g', L.fat / info.meta));
+      kp.append(kpi('Notas do sistema', int(R.notas), 'NF-e e NFC-e emitidas', 'g'), kpi('Ticket médio', brl.format(R.ticket), 'por nota do sistema'),
+        kpi('Margem bruta', brl.format(R.margem), R.fatNf ? pct(R.margem / R.fatNf) + ' das notas' : '', 'a'), kpi('Comissão estimada', brl.format(R.com), info ? pct(info.taxa) + ' sobre o faturamento' : '', 'a'));
       const grid = mk('div', 'grid');
-      const c1 = card('por-dia', 'Faturamento por dia', 'wide'); const ch = mk('div', 'chart'); const series = sel.map((x) => x.n); c1.append(legenda(series), ch); grid.append(c1);
+      const c1 = card('por-dia', 'Faturamento por dia', 'wide'); const ch = mk('div', 'chart'); c1.append(legenda(nomes), ch); grid.append(c1);
       const c2 = card('vend-barras', 'Faturamento por vendedor');
-      c2.append(barras(todos.slice().sort((a, b) => b.d.fat - a.d.fat).map((x) => ({ nome: x.n, v: x.d.fat, txt: brl.format(x.d.fat), sub: pct(x.d.fat / (L.fat || 1)) }))));
-      const c3 = card('pag-resumo', 'Formas de pagamento (loja)');
-      c3.append(barras(L.formas.slice(0, 6).map((f) => ({ nome: f.f, v: f.v, txt: brl.format(f.v), sub: pct(f.v / (L.fat || 1)) })), 'g'), mk('p', 'note', 'As 6 maiores. Veja todas na aba Pagamentos.'));
+      c2.append(barras(porVend.map((x) => ({ nome: x.n, v: x.r.fat, txt: brl.format(x.r.fat), sub: pct(x.r.fat / (R.fat || 1)) }))));
+      const fm = new Map(); ns.forEach((n) => { const x = fm.get(n.f) || { f: n.f, n: 0, v: 0 }; x.n++; x.v += n.v; fm.set(n.f, x); });
+      const formas = [...fm.values()].sort((a, b) => b.v - a.v);
+      const c3 = card('pag-resumo', 'Formas de pagamento');
+      c3.append(barras(formas.slice(0, 6).map((f) => ({ nome: f.f, v: f.v, txt: brl.format(f.v), sub: pct(f.v / (R.fat || 1)) })), 'g'), mk('p', 'note', 'As 6 maiores. Veja todas na aba Pagamentos.'));
       grid.append(c2, c3); pv.append(kp, grid);
       const mapa = new Map();
-      sel.forEach((x) => x.d.dias.forEach((dd) => { const e = mapa.get(dd.d) || { label: diaCurto(dd), full: dd.d, partes: [], ord: dd.d.split(' ')[1].split('/').reverse().join('') }; e.partes.push({ s: x.n, v: dd.total }); mapa.set(dd.d, e); }));
-      colunas(ch, [...mapa.values()].sort((a, b) => (a.ord < b.ord ? -1 : 1)), series);
+      ns.forEach((n) => { const e = mapa.get(n.iso) || { iso: n.iso, label: n.iso.slice(8), full: n.dl, partes: new Map() }; e.partes.set(n.vend, (e.partes.get(n.vend) || 0) + n.v); mapa.set(n.iso, e); });
+      colunas(ch, [...mapa.values()].sort((a, b) => (a.iso < b.iso ? -1 : 1)).map((e) => ({ label: e.label, full: e.full, partes: nomes.filter((n) => e.partes.has(n)).map((n) => ({ s: n, v: e.partes.get(n) })) })), nomes);
 
-      // Pagamentos (loja inteira)
+      // Pagamentos
       const pp = paineis.pag; pp.replaceChildren(); const gp = mk('div', 'grid');
       const p1 = card('pagamento', 'Por forma de pagamento');
-      p1.append(barras(L.formas.map((f) => ({ nome: f.f, v: f.v, txt: brl.format(f.v), sub: pct(f.v / (L.fat || 1)) }))));
+      p1.append(barras(formas.map((f) => ({ nome: f.f, v: f.v, txt: brl.format(f.v), sub: pct(f.v / (R.fat || 1)) }))));
       const p2 = card('ticket-forma', 'Lançamentos e ticket médio por forma');
-      p2.append(tabela([['Forma'], ['Lançamentos', 1], ['Valor', 1], ['Ticket médio', 1]], L.formas.map((f) => [f.f, int(f.n), brl.format(f.v), brl.format(f.v / (f.n || 1))]),
-        ['Total', int(sum(L.formas, (f) => f.n)), brl.format(L.fat), '']), mk('p', 'note', 'Loja toda, incluindo o caderno. Pagamentos combinados aparecem com as formas somadas (ex.: Dinheiro + PIX).'));
+      p2.append(tabela([['Forma'], ['Lançamentos', 1], ['Valor', 1], ['Ticket médio', 1]], formas.map((f) => [f.f, int(f.n), brl.format(f.v), brl.format(f.v / (f.n || 1))]),
+        ['Total', int(ns.length), brl.format(R.fat), '']), mk('p', 'note', 'Inclui o caderno. Pagamentos combinados aparecem com as formas somadas (ex.: Dinheiro + PIX).'));
       gp.append(p1, p2); pp.append(gp);
 
-      // Mercadorias (loja inteira)
-      painelMerc(paineis.merc, L, true, busca);
+      // Mercadorias
+      const its = ns.filter((n) => n.tipo !== 'Caderno').flatMap((n) => n.i).filter((i) => !sSec.value || (i.m && i.s === sSec.value));
+      const ag = agregar(its); painelMerc(paineis.merc, ag.merc, ag.secoes, true, busca);
 
       // Equipe e comissão
       const pe = paineis.equipe; pe.replaceChildren();
       const e1 = card('vendedores', 'Desempenho por vendedor', 'wide');
-      e1.append(tabela([['Vendedor'], ['Notas', 1], ['Faturamento', 1], ['% da loja', 1], ['Ticket médio', 1], ['Margem bruta', 1], ['Comissão', 1]],
-        todos.map(({ n, d }) => [n, int(d.notas), brl.format(d.fat), pct(d.fat / (L.fat || 1)), brl.format(d.ticket), brl.format(d.margem || 0), d.com != null ? brl.format(d.com) : '—']),
-        ['Total', int(sum(todos, (x) => x.d.notas)), brl.format(L.fat), '100%', '', brl.format(sum(todos, (x) => x.d.margem || 0)), brl.format(sum(todos, (x) => x.d.com || 0))]),
-        mk('p', 'note', 'Margem só nos itens com custo cadastrado; vendas do caderno não têm custo. Comissão de 1% sem meta batida e 2% com meta batida, sobre o faturamento do vendedor.'));
+      e1.append(tabela([['Vendedor'], ['Notas', 1], ['Faturamento', 1], ['% do total', 1], ['Ticket médio', 1], ['Margem bruta', 1], ['Comissão', 1]],
+        porVend.map(({ n, r, taxa }) => [n, int(r.notas), brl.format(r.fat), pct(r.fat / (R.fat || 1)), brl.format(r.ticket), brl.format(r.margem), taxa ? brl.format(r.com) : '—']),
+        ['Total', int(R.notas), brl.format(R.fat), '100%', brl.format(R.ticket), brl.format(R.margem), brl.format(R.com)]),
+        mk('p', 'note', 'Segue os filtros acima. Margem só nos itens com custo confiável; vendas do caderno não têm custo. Comissão de 1% sem meta batida e 2% com meta batida, sobre o faturamento do vendedor.'));
       const e2 = card('comissao-cfg', 'Metas e comissão por mês', 'wide');
       e2.append(tabela([['Mês'], ['Meta', 1], ['Faturamento', 1], ['Atingido', 1], ['Meta batida'], ['Taxa', 1]],
-        P.meses.slice().reverse().map((x) => { const f = (P.loja[x.mes] || { fat: 0 }).fat; return [x.label, x.meta ? brl.format(x.meta) : '—', brl.format(f), x.meta ? pct(f / x.meta) : '—', x.batida, pct(x.taxa)]; })));
+        P.meses.slice().reverse().map((x) => { const f = (P.loja[x.mes] || { fat: 0 }).fat; return [x.label, x.meta ? brl.format(x.meta) : '—', brl.format(f), x.meta ? pct(f / x.meta) : '—', x.batida, pct(x.taxa)]; })),
+        mk('p', 'note', 'Mês inteiro, sem filtros.'));
       pe.append(e1, e2);
 
       // Romaneio
       const pr = paineis.romaneio; pr.replaceChildren();
       const cr = card('romaneio', 'Romaneio por vendedor', 'wide');
-      const rt = mk('div', 'tools noprint'); const rf = mk('div', 'f'); const rl = mk('label', '', 'Romaneio de'); rl.htmlFor = 'f-rom'; const sr = mk('select'); sr.id = 'f-rom';
-      todos.forEach((x) => sr.append(new Option(x.n, x.n))); if (sVend.value) sr.value = sVend.value; rf.append(rl, sr); rt.append(rf);
-      const host = mk('div'); const fillR = () => { const x = todos.find((t) => t.n === sr.value); romaneio(host, x ? x.d.dias : [], true); };
+      const sr = mk('select'); nomes.forEach((n) => sr.append(new Option(n, n)));
+      if (nomes.includes(sVend.value)) sr.value = sVend.value; else if (nomes.includes(romSel)) sr.value = romSel;
+      const rt = mk('div', 'tools noprint'); rt.append(campo('f-rom', 'Romaneio de', sr));
+      const host = mk('div'); const fillR = () => { romSel = sr.value; romaneio(host, porDia(ns.filter((n) => n.vend === sr.value)), true); };
       sr.addEventListener('change', fillR); cr.append(rt, ctrlRomaneio(host), host); fillR(); pr.append(cr);
 
-      // Alertas de qualidade dos dados
-      const pa = paineis.alertas; pa.replaceChildren(); const A = (P.alertas || {})[m];
-      if (!A) { pa.append(mk('div', 'empty', 'Sem alertas para este mês.')); return; }
+      // Alertas (filtrados por período e vendedor)
+      const pa = paineis.alertas; pa.replaceChildren(); const A0 = (P.alertas || {})[m];
+      if (!A0) { pa.append(mk('div', 'empty', 'Sem alertas para este mês.')); return; }
+      const ok = (x) => naData(x.d, de, ate) && (!sVend.value || x.vend === sVend.value);
+      const A = { suspeito: A0.suspeito.filter(ok), abaixo: A0.abaixo.filter(ok), semDetalhe: A0.semDetalhe.filter(ok) };
       const perda = sum(A.abaixo, (x) => x.ct - x.pv), semDet = sum(A.semDetalhe, (x) => x.falta);
       const ka = mk('div', 'kpis');
       ka.append(kpi('Custo suspeito no cadastro', int(A.suspeito.length) + (A.suspeito.length === 1 ? ' item' : ' itens'), 'fora do cálculo de margem', 'a'),
         kpi('Vendidos abaixo do custo', int(A.abaixo.length) + (A.abaixo.length === 1 ? ' item' : ' itens'), brl.format(perda) + ' abaixo do custo', 'a'),
-        kpi('Valor sem detalhe de itens', brl.format(semDet), A.semDetalhe.length + ' notas · ' + brl.format(A.recuperado) + ' recuperados do CFOP'),
-        kpi('Notas sem cliente', int(A.semCliente) + ' de ' + int(A.notas), A.notas ? pct(A.semCliente / A.notas) + ' das notas' : '', 'g'));
+        kpi('Valor sem detalhe de itens', brl.format(semDet), A.semDetalhe.length + ' notas · ' + brl.format(A0.recuperado) + ' recuperados do CFOP no mês'),
+        kpi('Notas sem cliente', int(A0.semCliente) + ' de ' + int(A0.notas), (A0.notas ? pct(A0.semCliente / A0.notas) + ' das notas' : '') + ' · mês inteiro', 'g'));
       const linhasIt = (l) => l.map((x) => [dataBR(x.d), x.t, x.vend, x.m, String(x.q).replace('.', ','), brl.format(x.pv), brl.format(x.cu), brl.format(x.ct)]);
       const colsIt = [['Data'], ['Nota'], ['Vendedor'], ['Mercadoria'], ['Qtd', 1], ['Vendido', 1], ['Custo unit.', 1], ['Custo total', 1]];
-      const a1 = card('alerta-suspeito', 'Custo suspeito no cadastro', 'wide');
-      a1.append(mk('p', 'note', 'O custo unitário é mais de 3 vezes o preço de venda: provavelmente o custo da caixa ou do pacote foi cadastrado na unidade. Corrija o custo no MIX. Esses itens ficam fora da margem até lá.'),
-        A.suspeito.length ? mk('div', 'scroll') : mk('div', 'empty', 'Nenhum item.'));
-      if (A.suspeito.length) a1.lastChild.append(tabela(colsIt, linhasIt(A.suspeito)));
-      const a2 = card('alerta-abaixo', 'Vendidos abaixo do custo', 'wide');
-      a2.append(mk('p', 'note', 'Preço de venda menor que o custo cadastrado. Confira o preço de tabela ou se houve desconto indevido.'),
-        A.abaixo.length ? mk('div', 'scroll') : mk('div', 'empty', 'Nenhum item.'));
-      if (A.abaixo.length) a2.lastChild.append(tabela(colsIt, linhasIt(A.abaixo)));
-      const a3 = card('alerta-semdetalhe', 'Notas com itens não listados', 'wide');
-      a3.append(mk('p', 'note', 'O total da nota é maior que a soma dos itens que os relatórios do MIX trazem. O valor conta no faturamento, mas fica fora das mercadorias e da margem.'),
-        A.semDetalhe.length ? mk('div', 'scroll') : mk('div', 'empty', 'Nenhuma nota.'));
-      if (A.semDetalhe.length) a3.lastChild.append(tabela([['Data'], ['Nota'], ['Vendedor'], ['Total da nota', 1], ['Sem detalhe', 1]], A.semDetalhe.map((x) => [dataBR(x.d), x.t, x.vend, brl.format(x.total), brl.format(x.falta)])));
-      pa.append(ka, a1, a2, a3, mk('p', 'note', 'Cliente: os relatórios do MIX não trazem o cliente da nota. Para analisar clientes, é preciso preencher clientes.csv ou exportar os XMLs das notas.'));
+      const bloco = (id, tit, nota, l, tab) => { const c = card(id, tit, 'wide'); c.append(mk('p', 'note', nota)); if (l.length) { const s = mk('div', 'scroll'); s.append(tab); c.append(s); } else c.append(mk('div', 'empty', 'Nada no período.')); return c; };
+      pa.append(ka,
+        bloco('alerta-suspeito', 'Custo suspeito no cadastro', 'O custo unitário é mais de 3 vezes o preço de venda: provavelmente o custo da caixa ou do pacote foi cadastrado na unidade. Corrija o custo no MIX. Esses itens ficam fora da margem até lá.', A.suspeito, tabela(colsIt, linhasIt(A.suspeito))),
+        bloco('alerta-abaixo', 'Vendidos abaixo do custo', 'Preço de venda menor que o custo cadastrado. Confira o preço de tabela ou se houve desconto indevido.', A.abaixo, tabela(colsIt, linhasIt(A.abaixo))),
+        bloco('alerta-semdetalhe', 'Notas com itens não listados', 'O total da nota é maior que a soma dos itens que os relatórios do MIX trazem. O valor conta no faturamento, mas fica fora das mercadorias e da margem.', A.semDetalhe,
+          tabela([['Data'], ['Nota'], ['Vendedor'], ['Total da nota', 1], ['Sem detalhe', 1]], A.semDetalhe.map((x) => [dataBR(x.d), x.t, x.vend, brl.format(x.total), brl.format(x.falta)]))),
+        mk('p', 'note', 'Cliente: os relatórios do MIX não trazem o cliente da nota. Para analisar clientes, é preciso preencher clientes.csv ou exportar os XMLs das notas.'));
     };
-    sMes.addEventListener('change', draw); sVend.addEventListener('change', draw); draw();
+    sMes.addEventListener('change', () => { prepMes(); draw(); });
+    [sDe, sAte, sVend, sForma, sTipo, sSec].forEach((e) => e.addEventListener('change', draw));
+    lp.b.addEventListener('click', () => { [sDe, sAte, sVend, sForma, sTipo, sSec].forEach((e) => (e.value = '')); draw(); });
+    prepMes(); draw();
   };
 
   // ---------- entrada ----------
