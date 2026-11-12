@@ -416,7 +416,7 @@ details.day > summary span:first-child { flex: 1; }
   const viewAdmin = (P) => {
     $('#titulo').textContent = 'Vendas Pé de Serra';
     const sDe = dateIn(), sAte = dateIn(), sVend = mk('select'), sForma = mk('select'), sTipo = mk('select'), sSec = mk('select'); const lp = botaoLimpar();
-    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['pag', 'Pagamentos'], ['merc', 'Mercadorias'], ['equipe', 'Equipe e comissão'], ['romaneio', 'Romaneio'], ['alertas', 'Alertas']],
+    const { sMes, paineis } = montar(P, [['visao', 'Visão geral'], ['pag', 'Pagamentos'], ['merc', 'Mercadorias'], ['equipe', 'Equipe e comissão'], ['romaneio', 'Romaneio'], ['compras', 'Compras x Vendas'], ['alertas', 'Alertas']],
       [campo('f-de', 'De', sDe), campo('f-ate', 'Até', sAte), campo('f-vend', 'Vendedor', sVend), campo('f-forma', 'Forma de pagamento', sForma), campo('f-tipo', 'Tipo de nota', sTipo), campo('f-secao', 'Seção (mercadorias)', sSec), lp.f]);
     const busca = { v: '' }; let romSel = '';
     const notas = (m) => Object.keys(P.vendedores).flatMap((vend) => ((P.vendedores[vend][m] || {}).dias || []).flatMap((dd) => dd.n.map((n) => ({ ...n, vend, iso: isoDe(dd), dl: dd.d, tipo: tipoDe(n.t) }))));
@@ -497,6 +497,43 @@ details.day > summary span:first-child { flex: 1; }
       const rt = mk('div', 'tools noprint'); rt.append(campo('f-rom', 'Romaneio de', sr));
       const host = mk('div'); const fillR = () => { romSel = sr.value; romaneio(host, porDia(ns.filter((n) => n.vend === sr.value)), true); };
       sr.addEventListener('change', fillR); cr.append(rt, ctrlRomaneio(host), host); fillR(); pr.append(cr);
+
+      // Compras x Vendas (segue período e seção; vendedor, forma e tipo não se aplicam)
+      const pc = paineis.compras; pc.replaceChildren();
+      const cps = ((P.compras || {})[m] || []).map(([iso, nf, forn, merc, s, q, v]) => ({ iso, nf, forn, m: merc, s, q, v }))
+        .filter((c) => naData(c.iso, de, ate) && (!sSec.value || c.s === sSec.value));
+      const vendP = notas(m).filter((n) => naData(n.iso, de, ate));
+      const itP = vendP.filter((n) => n.tipo !== 'Caderno').flatMap((n) => n.i).filter((i) => !sSec.value || (i.m && i.s === sSec.value));
+      const fatP = sSec.value ? sum(itP, (i) => i.v) : sum(vendP, (n) => n.v);
+      const cmv = sum(itP, (i) => (i.c != null ? i.c : 0)), vComCusto = sum(itP, (i) => (i.c != null ? i.v : 0));
+      const totC = sum(cps, (c) => c.v), nNotas = new Set(cps.map((c) => c.nf)).size, nForn = new Set(cps.map((c) => c.forn)).size;
+      const kc = mk('div', 'kpis');
+      kc.append(kpi('Compras', brl.format(totC), nNotas + (nNotas === 1 ? ' nota' : ' notas') + ' · ' + nForn + (nForn === 1 ? ' fornecedor' : ' fornecedores'), 'a'),
+        kpi('Vendas', brl.format(fatP), sSec.value ? 'itens da seção' : 'sistema + caderno'),
+        kpi('Custo do que foi vendido', brl.format(cmv), 'itens com custo · ' + brl.format(vComCusto) + ' vendidos', 'g'),
+        kpi('Compras ÷ custo vendido', cmv ? (totC / cmv).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '×' : '—', cmv ? (totC > cmv ? 'estoque crescendo' : 'estoque diminuindo') : ''));
+      const gc = mk('div', 'grid');
+      const fo = new Map(); cps.forEach((c) => fo.set(c.forn, (fo.get(c.forn) || 0) + c.v));
+      const c1x = card('compras-forn', 'Compras por fornecedor');
+      c1x.append(barras([...fo].sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ nome: k, v, txt: brl.format(v), sub: pct(v / (totC || 1)) })), 'g'));
+      const sc2 = new Map(); cps.forEach((c) => { const x = sc2.get(c.s) || { c: 0, v: 0 }; x.c += c.v; sc2.set(c.s, x); });
+      itP.forEach((i) => { if (!i.m) return; const s = i.s || 'Sem seção'; const x = sc2.get(s) || { c: 0, v: 0 }; x.v += i.c != null ? i.c : 0; sc2.set(s, x); });
+      const c2x = card('compras-secao', 'Por seção: comprado x custo vendido');
+      c2x.append(tabela([['Seção'], ['Comprado', 1], ['Custo vendido', 1], ['Diferença', 1]],
+        [...sc2].sort((a, b) => b[1].c - a[1].c).map(([s, x]) => [s, brl.format(x.c), brl.format(x.v), brl.format(x.c - x.v)])),
+        mk('p', 'note', 'A seção das compras vem do relatório de vendas por seção, então mercadoria que ainda não vendeu aparece como "Sem seção".'));
+      gc.append(c1x, c2x);
+      const nfm = new Map(); cps.forEach((c) => { const x = nfm.get(c.nf) || { iso: c.iso, nf: c.nf, forn: c.forn, n: 0, v: 0 }; x.n++; x.v += c.v; nfm.set(c.nf, x); });
+      const c3x = card('compras-notas', 'Notas de compra', 'wide'); const s3 = mk('div', 'scroll');
+      s3.append(tabela([['Data'], ['Nota'], ['Fornecedor'], ['Itens', 1], ['Total', 1]], [...nfm.values()].sort((a, b) => (a.iso < b.iso ? 1 : -1)).map((x) => [dataBR(x.iso), x.nf, x.forn, int(x.n), brl.format(x.v)]), ['Total', '', '', int(cps.length), brl.format(totC)]));
+      c3x.append(cps.length ? s3 : mk('div', 'empty', 'Nenhuma compra no período.'));
+      const vq = new Map(); itP.forEach((i) => { if (i.m) vq.set(i.m.toUpperCase(), (vq.get(i.m.toUpperCase()) || 0) + (i.q || 0)); });
+      const mm = new Map(); cps.forEach((c) => { const x = mm.get(c.m) || { m: c.m, forn: c.forn, q: 0, v: 0 }; x.q += c.q; x.v += c.v; mm.set(c.m, x); });
+      const c4x = card('compras-merc', 'Mercadorias compradas', 'wide'); const s4 = mk('div', 'scroll');
+      s4.append(tabela([['Mercadoria'], ['Fornecedor'], ['Qtd comprada', 1], ['Valor', 1], ['Qtd vendida no período', 1]],
+        [...mm.values()].sort((a, b) => b.v - a.v).map((x) => [x.m, x.forn, int(x.q), brl.format(x.v), int(vq.get(x.m.toUpperCase()) || 0)])));
+      c4x.append(cps.length ? s4 : mk('div', 'empty', 'Nenhuma compra no período.'), mk('p', 'note', 'Segue os filtros de período e seção. Vendedor, forma de pagamento e tipo de nota não se aplicam às compras.'));
+      pc.append(kc, gc, c3x, c4x);
 
       // Alertas (filtrados por período e vendedor)
       const pa = paineis.alertas; pa.replaceChildren(); const A0 = (P.alertas || {})[m];
